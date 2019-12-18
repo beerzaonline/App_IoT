@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:toast/toast.dart';
 import 'Dashboard.dart';
 import 'Signup.dart';
+import 'config.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -38,6 +41,40 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void showToast(String msg,
+        {int duration, int gravity, Color backgroundColor}) {
+      Toast.show(msg, context,
+          duration: duration,
+          gravity: gravity,
+          backgroundColor: backgroundColor);
+    }
+
+    void _onLogin() async {
+      if (true) {
+        var uri = Uri.http('${config.API_Url}', '/api/user/loginApp',
+            {"username": _username.text, "password": _password.text});
+        var response = await http.get(uri, headers: {
+          // HttpHeaders.authorizationHeader: 'Token $token',
+          HttpHeaders.contentTypeHeader: 'application/json',
+        });
+        print(response.body);
+        Map jsonData = jsonDecode(response.body) as Map;
+
+        if (jsonData['status'] == 0) {
+          int userId = jsonData['data'];
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (BuildContext context) => dashboard(userId, null)));
+        } else {
+          showToast("Username Or Password Error",
+              duration: Toast.LENGTH_LONG,
+              gravity: 0,
+              backgroundColor: Colors.white54);
+        }
+      }
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: ListView(
@@ -75,7 +112,7 @@ class MyApp extends StatelessWidget {
                         },
                       ),
                       new Padding(padding: EdgeInsets.only(top: 20.0)),
-                      new TextFormField(       
+                      new TextFormField(
                         controller: _password,
                         style: TextStyle(color: Colors.grey),
                         decoration: new InputDecoration(
@@ -87,11 +124,11 @@ class MyApp extends StatelessWidget {
                           prefixIcon: const Icon(
                             Icons.lock,
                             color: Colors.white,
-                          ),                                                    
-                        ),                          
+                          ),
+                        ),
                         validator: (String value) {
                           return "กรุณากรอก password";
-                        },                                             
+                        },
                       ),
                     ],
                   ),
@@ -104,11 +141,7 @@ class MyApp extends StatelessWidget {
                     shape: new RoundedRectangleBorder(
                       borderRadius: new BorderRadius.circular(15.0),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (BuildContext context) =>
-                              dashboard({"temp": ""})));
-                    },
+                    onPressed: _onLogin,
                     child: Text("Login"),
                     color: Colors.grey[300],
                   ),

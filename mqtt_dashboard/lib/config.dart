@@ -7,4 +7,6 @@ class config {
   static const String broker = "postman.cloudmqtt.com";
   static const int port = 14893;
   static const String clientIdentifier = 'android';
+
+  static const String API_Url = "172.25.11.99:8080";
 }

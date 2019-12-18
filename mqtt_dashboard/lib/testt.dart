@@ -1,55 +1,50 @@
 import 'package:flutter/material.dart';
-// import 'shared_prefs_helper.dart';
-// import 'package:flutter/cupertino.dart';
+import 'package:mqtt_client/mqtt_client.dart' as mqtt;
+import 'package:mqtt_dashboard/Connection.dart';
 
-class PreferencesSelectTime extends StatefulWidget {
-    String _title;
-    TimeOfDay _timeOfDay;
-    Function _updateTimeFunction;
-
-    PreferencesSelectTime(this._title, this._timeOfDay, this._updateTimeFunction);
-
-    @override
-    PreferencesSelectTimeState createState() => PreferencesSelectTimeState(_title, _timeOfDay, _updateTimeFunction);
+class testPage extends StatefulWidget {
+  mqtt.MqttClient _client;
+  testPage(mqtt.MqttClient client) {
+    this._client = client;
+  }
+  @override
+  _testPageState createState() => _testPageState(_client);
 }
 
-class PreferencesSelectTimeState extends State<PreferencesSelectTime> {
+class _testPageState extends State<testPage> {
+  mqtt.MqttClient _client;
+  _testPageState(mqtt.MqttClient client) {
+    this._client = client;
+  }
 
-    String _title;
-    TimeOfDay _timeOfDay;
-    Function _updateTimeFunction;
-    PreferencesSelectTimeState(this._title, this._timeOfDay, this._updateTimeFunction);
+  @override
+  void initState() {
+    super.initState();
+  }
 
-    @override
-    Widget build(BuildContext context) {
-      
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Send'),
+        centerTitle: true,
+      ),
+      body: Container(
+        child: Center(
+          child: RaisedButton(
+            child: Text('OK'),
+            onPressed: () => _onPublish("led1on"),
+          ),
+        ),
+      ),
+    );
+  }
 
-        return Scaffold(
-            appBar: AppBar(
-                title: Text(_title),
-            ),
-            body: FutureBuilder<TimeOfDay>(
-                // future: SharedPreferencesHelper.getStartTime(),
-                builder: (BuildContext context, AsyncSnapshot snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done) {
-                        return Container(
-                            height: MediaQuery.of(context).size.height / 4,
-                                // child: CupertinoDatePicker(
-                                //     mode: CupertinoDatePickerMode.time,
-                                //     initialDateTime: DateTime(1969, 1, 1, _timeOfDay.hour, _timeOfDay.minute),
-                                //     onDateTimeChanged: (DateTime newDateTime) {
-                                //         var newTod = TimeOfDay.fromDateTime(newDateTime);
-                                //         _updateTimeFunction(newTod);
-                                //     },
-                                //     use24hFormat: false,
-                                //     minuteInterval: 1,
-                                // )
-                        );
-                    } else {
-                        return new CircularProgressIndicator();
-                    }
-                }
-            )
-        );
-    }
+  void _onPublish(String msg) {
+    const String pubTopic = '/ESP/LED1';
+    final mqtt.MqttClientPayloadBuilder builder =
+        mqtt.MqttClientPayloadBuilder();
+    builder.addString('$msg');
+    _client.publishMessage(pubTopic, mqtt.MqttQos.exactlyOnce, builder.payload);
+  }
 }

@@ -3,15 +3,20 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:mqtt_dashboard/config.dart';
+import 'package:toast/toast.dart';
+import 'package:http/http.dart' as http;
+import 'Dashboard.dart';
+import 'config.dart';
 
 void main() => runApp(new signup());
 
 class signup extends StatelessWidget {
   TextEditingController _username = TextEditingController();
+  TextEditingController _fullName = TextEditingController();
   TextEditingController _password = TextEditingController();
   TextEditingController _email = TextEditingController();
 
-  Future _onRegister() async {
+  Future _onRegisterCloudMQTT() async {
     String url = 'https://api.cloudmqtt.com/api/user';
     Map map = {
       'username': 'zzz',
@@ -38,6 +43,39 @@ class signup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void showToast(String msg, {int duration, int gravity}) {
+      Toast.show(msg, context, duration: duration, gravity: gravity);
+    }
+
+    void onRegister() async {
+      // bool check = _formKey.currentState.validate();
+      if (true) {
+        var uri = Uri.http('${config.API_Url}', '/api/user/register', {
+          "username": _username.text,
+          "pw": _password.text,
+          "fullName": "benjawan komtabut"
+        });
+        var response = await http.get(uri, headers: {
+          // HttpHeaders.authorizationHeader: 'Token $token',
+          HttpHeaders.contentTypeHeader: 'application/json',
+        });
+        print(response.body);
+        Map jsonData = jsonDecode(response.body) as Map;
+
+        if (jsonData['status'] == 0) {
+          int userId = jsonData['data'];
+          showToast("Register Success",
+              duration: Toast.LENGTH_LONG, gravity: 0);
+          // Navigator.pushReplacement(
+          //     context,
+          //     MaterialPageRoute(
+          //         builder: (BuildContext context) => dashboard(userId)));
+        } else {
+          showToast("User Exit", duration: Toast.LENGTH_LONG, gravity: 0);
+        }
+      }
+    }
+
     return MaterialApp(
         debugShowCheckedModeBanner: false,
         title: "MQTT",
@@ -65,7 +103,26 @@ class signup extends StatelessWidget {
                               focusedBorder: OutlineInputBorder(
                                 borderSide: BorderSide(color: Colors.grey),
                               ),
-                              labelText: 'NAME',
+                              labelText: 'USERNAME',
+                              labelStyle: TextStyle(color: Colors.grey),
+                              prefixIcon: const Icon(
+                                Icons.account_box,
+                                color: Colors.white70,
+                              ),
+                              prefixText: ' ',
+                              errorText: null,
+                              errorStyle: null,
+                            ),
+                          ),
+                          new Padding(padding: EdgeInsets.only(top: 10.0)),
+                          new TextFormField(
+                            controller: _fullName,
+                            style: TextStyle(color: Colors.grey),
+                            decoration: new InputDecoration(
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey),
+                              ),
+                              labelText: 'FULL NAME',
                               labelStyle: TextStyle(color: Colors.grey),
                               prefixIcon: const Icon(
                                 Icons.account_box,
@@ -121,7 +178,7 @@ class signup extends StatelessWidget {
                               shape: new RoundedRectangleBorder(
                                 borderRadius: new BorderRadius.circular(15.0),
                               ),
-                              onPressed: _onRegister,
+                              onPressed: onRegister,
                               child: Text("SIGN UP"),
                               color: Colors.grey,
                             ),

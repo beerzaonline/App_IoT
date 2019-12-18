@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:mqtt_dashboard/GetResponses.dart';
 import 'Connection.dart';
+import 'package:mqtt_client/mqtt_client.dart' as mqtt;
+import 'package:http/http.dart' as http;
 import 'config.dart';
 
 import 'package:mqtt_dashboard/tempSwitch.dart';
@@ -23,17 +29,14 @@ TextEditingController _bPublishOn = TextEditingController();
 TextEditingController _bPublishOff = TextEditingController();
 
 class dashboard extends StatefulWidget {
-  var _data;
-  dashboard(var data) {
-    this._data = data;
-    if (_data != null) {
-      _temp.add(_data);
-    }
-    //print(_temp.length);
-  }
+  int _userId;
+  mqtt.MqttClient _client;
+  dashboard(this._userId, this._client);
+  //print(_temp.length);
+
   @override
   State<StatefulWidget> createState() {
-    return _dashboard(_data);
+    return _dashboard(_userId, _client);
   }
 }
 
@@ -45,58 +48,117 @@ class dashboard extends StatefulWidget {
 // }
 
 class _dashboard extends State {
-  var _data;
-  _dashboard(var data) {
-    this._data = data;
-    _temp.add(_data);
-  }
+  int _userId;
+  mqtt.MqttClient _client;
+  _dashboard(this._userId, this._client);
 
   List lst = List();
   int count = 0;
 
   @override
   void initState() {
-    // _bodySwitch();
-    // _bodyButton();
+    this._listCard();
     super.initState();
   }
 
-//ลบ card  ต่างๆ
-  void _delete() {
-    setState(() {
-      lst.removeLast();
+  void _onSwitchSave() async {
+    var uri = Uri.http('${config.API_Url}', '/api/card/save', {
+      "userId": _userId.toString(),
+      "title": _sName.text,
+      "topic": _sTopic.text,
+      "onValue": _sPublishOn.text,
+      "offValue": _sPublishOff.text
     });
+    var response = await http.get(uri, headers: {
+      // HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+    Map jsonData = jsonDecode(response.body) as Map;
+
+    if (jsonData['status'] == 0) {
+      // int userId = jsonData['data'];
+      Navigator.pop(context);
+      Navigator.pop(context);
+      setState(() {
+        lst.clear();
+        this._listCard();
+      });
+      // Navigator.push(
+      //     context,
+      //     MaterialPageRoute(
+      //         builder: (BuildContext context) => dashboard(userId, null)));
+    } else {
+      // showToast("Username Or Password Error",
+      //     duration: Toast.LENGTH_LONG,
+      //     gravity: 0,
+      //     backgroundColor: Colors.white54);
+    }
+  }
+
+  void _listCard() async {
+    var uri = Uri.http('${config.API_Url}', '/api/card/list', {
+      "userId": _userId.toString(),
+    });
+    var response = await http.get(uri, headers: {
+      // HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+    print(response.body);
+    Map jsonData = jsonDecode(response.body) as Map;
+
+    if (jsonData['status'] == 0) {
+      List temp = jsonData['data'];
+      for (var i = 0; i < temp.length; i++) {
+        Map<String, dynamic> data = temp[i];
+        _bodySwitch(data);
+      }
+      // int userId = jsonData['data'];
+      // Navigator.push(
+      //     context,
+      //     MaterialPageRoute(
+      //         builder: (BuildContext context) => dashboard(userId, null)));
+
+    } else {
+      // showToast("Username Or Password Error",
+      //     duration: Toast.LENGTH_LONG,
+      //     gravity: 0,
+      //     backgroundColor: Colors.white54);
+    }
   }
 
 //card Switch
 
-  void _bodySwitch() {
+  void _bodySwitch(Map<String, dynamic> data) {
     String _name = _sName.text;
     String _valueOn = _sTextOn.text;
     String _valueOff = _sTextOff.text;
+
     Card bt = Card(
       child: ListTile(
         onLongPress: () {
-          _menu(context);
+          _menu(context, data['id']);
         },
-        title: Text(_name),
+        title: Text(data['title']),
         // leading: Text(''),
         subtitle: Row(
           // mainAxisAlignment: MainAxisAlignment.center,
           // crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            new Text('_valueOn'),
+            new Text('${data['id']}'),
             Padding(
               padding: EdgeInsets.only(right: 10),
             ),
-            Icon(
-              MdiIcons.toggleSwitch,
-              size: 40,
+            IconButton(
+              onPressed: () {},
+              icon: Icon(
+                MdiIcons.toggleSwitchOff,
+                size: 40,
+              ),
             ),
             Padding(
               padding: EdgeInsets.only(left: 10),
             ),
-            new Text('_valueOff'),
+            new Text('OFF'),
             Padding(
               padding: EdgeInsets.only(right: 10),
             ),
@@ -134,7 +196,7 @@ class _dashboard extends State {
           onPressed: () {},
         ),
         trailing: FlatButton(
-          onPressed: _delete,
+          onPressed: () {},
           child: Icon(MdiIcons.delete),
         ),
       ),
@@ -145,7 +207,7 @@ class _dashboard extends State {
   }
 
 //popup menu
-  Future _menu(BuildContext context) async {
+  Future _menu(BuildContext context, int idCard) async {
     return await showDialog(
         context: context,
         barrierDismissible: true,
@@ -156,7 +218,7 @@ class _dashboard extends State {
                 onPressed: () {},
                 child: Row(
                   children: <Widget>[
-                    SizedBox(width: 300),
+                    // SizedBox(width: 300),
                     Icon(Icons.create),
                     Padding(
                       padding: EdgeInsets.only(right: 10),
@@ -166,7 +228,19 @@ class _dashboard extends State {
                 ),
               ),
               SimpleDialogOption(
-                onPressed: () {},
+                onPressed: () async {
+                  GetResponses obj = GetResponses();
+                  Map res = await obj.Get(
+                      url: "/api/card/delete",
+                      body: {"idCard": idCard.toString()});
+                  if (res['status'] == 0) {
+                    Navigator.pop(context);
+                    setState(() {
+                      lst.clear();
+                      this._listCard();
+                    });
+                  } else {}
+                },
                 child: Row(
                   children: <Widget>[
                     Icon(MdiIcons.delete),
@@ -217,8 +291,8 @@ class _dashboard extends State {
                   _dialogSwtich(context);
 
                   // _dialogTimepicker(context);
-                  _sName.clear();
-                  _sTopic.clear();
+                  // _sName.clear();
+                  // _sTopic.clear();
 
                   // Navigator.of(context).push(MaterialPageRoute(
                   //     builder: (BuildContext context) => addSwitch()));
@@ -329,6 +403,10 @@ class _dashboard extends State {
 //_dialogSwtich
 
   Future<Null> _dialogSwtich(BuildContext context) {
+    _sName.clear();
+    _sTopic.clear();
+    _sPublishOn.clear();
+    _sPublishOff.clear();
     return showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -359,7 +437,7 @@ class _dashboard extends State {
                   ),
                 ),
                 TextFormField(
-                  controller: _sTextOn,
+                  controller: _sPublishOn,
                   decoration: InputDecoration(
                     labelText: "Text",
                     hintText: "e.g.On,Off",
@@ -371,7 +449,7 @@ class _dashboard extends State {
                   ),
                 ),
                 TextFormField(
-                  controller: _sTextOff,
+                  controller: _sPublishOff,
                   decoration: InputDecoration(
                     labelText: "Text",
                     hintText: "e.g.On,Off",
@@ -385,15 +463,17 @@ class _dashboard extends State {
                 new Padding(padding: EdgeInsets.only(top: 8.0)),
                 RaisedButton(
                   child: Text('OK'),
-                  onPressed: () {
-                    _bodySwitch();
-                    _sName.clear();
-                    _sTopic.clear();
-                    _sTextOn.clear();
-                    _sTextOff.clear();
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                  },
+                  onPressed: _onSwitchSave
+                  // () {
+                  //   _bodySwitch();
+                  //   _sName.clear();
+                  //   _sTopic.clear();
+                  //   _sTextOn.clear();
+                  //   _sTextOff.clear();
+                  //   Navigator.pop(context);
+                  //   Navigator.pop(context);
+                  // }
+                  ,
                 )
               ],
             ),
@@ -533,7 +613,8 @@ class _dashboard extends State {
                   title: new Text("Connection"),
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(
-                        builder: (BuildContext context) => connectionPage()));
+                        builder: (BuildContext context) =>
+                            connectionPage(_userId, _client)));
                   }),
               new ListTile(
                   leading: new Icon(Icons.person),
