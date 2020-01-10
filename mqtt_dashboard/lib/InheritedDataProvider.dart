@@ -13,4 +13,5 @@ class InheritedDataProvider extends InheritedWidget {
       client != oldWidget.client;
   static InheritedDataProvider of(BuildContext context) =>
       context.inheritFromWidgetOfExactType(InheritedDataProvider);
+      
 }

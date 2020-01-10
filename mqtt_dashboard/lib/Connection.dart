@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
-import 'package:mqtt_dashboard/testt.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toast/toast.dart';
 
 import 'Dashboard.dart';
@@ -21,6 +21,7 @@ class _connectionPageState extends State<connectionPage> {
   mqtt.MqttClient client;
   _connectionPageState(this._userId, this.client);
 
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   TextEditingController _server = TextEditingController();
   TextEditingController _port = TextEditingController();
   TextEditingController _user = TextEditingController();
@@ -35,11 +36,45 @@ class _connectionPageState extends State<connectionPage> {
   String _tempMassage;
 
   StreamSubscription subscription;
+  List<String> _dataConnect = List<String>();
 
   @override
   void initState() {
-    print(client);
+    
+    if (client != null) {
+      // print(client.connectionStatus.state);
+      // print(mqtt.MqttConnectionState.connected);
+
+      if (client.connectionStatus.state == mqtt.MqttConnectionState.connected) {
+        connectionState = mqtt.MqttConnectionState.connected;
+      } else {
+        connectionState = mqtt.MqttConnectionState.disconnected;
+      }
+    } else {
+      connectionState = mqtt.MqttConnectionState.disconnected;
+    }
+    _getDataConnect().then((data) {
+      if (data.toString() != "[]") {
+        setState(() {
+          _server.text = data[0];
+          _port.text = data[1];
+          _user.text = data[2];
+          _pass.text = data[3];
+        });
+      }
+    });
     super.initState();
+  }
+
+  _saveDataConnect(List<String> values) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_userId.toString(), values);
+  }
+
+  Future _getDataConnect() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> temp = await prefs.getStringList(_userId.toString());
+    return temp;
   }
 
   @override
@@ -47,38 +82,34 @@ class _connectionPageState extends State<connectionPage> {
     // var aaa = InheritedDataProvider.of(context).client;
     // print(client);
 
-    void _subscribeToTopic(String topic) {
-      if (connectionState == mqtt.MqttConnectionState.connected) {
-        print('[MQTT client] Subscribing to ${topic.trim()}');
-        client.subscribe(topic, mqtt.MqttQos.exactlyOnce);
-      }
-    }
+    // void _subscribeToTopic(String topic) {
+    //   if (connectionState == mqtt.MqttConnectionState.connected) {
+    //     print('[MQTT client] Subscribing to ${topic.trim()}');
+    //     client.subscribe(topic, mqtt.MqttQos.exactlyOnce);
+    //   }
+    // }
 
     void showToast(String msg, {int duration, int gravity}) {
       Toast.show(msg, context, duration: duration, gravity: gravity);
     }
 
-    void _onMessage(List<mqtt.MqttReceivedMessage> event) {
-      print(event.length);
-      final mqtt.MqttPublishMessage recMess =
-          event[0].payload as mqtt.MqttPublishMessage;
-      final String message = mqtt.MqttPublishPayload.bytesToStringAsString(
-          recMess.payload.message);
-
-      /// The above may seem a little convoluted for users only interested in the
-      /// payload, some users however may be interested in the received publish message,
-      /// lets not constrain ourselves yet until the package has been in the wild
-      /// for a while.
-      /// The payload is a byte buffer, this will be specific to the topic
-      print('[MQTT client] MQTT message: topic is <${event[0].topic}>, '
-          'payload is <-- ${message} -->');
-      print("[MQTT client] message with topic: ${event[0].topic}");
-      print("[MQTT client] message with message: ${message}");
-      // _temp = double.parse(message);
-      setState(() {
-        _tempMassage = message;
-      });
-    }
+    // void _onMessage(List<mqtt.MqttReceivedMessage> event) {
+    //   print(event.length);
+    //   final mqtt.MqttPublishMessage recMess =
+    //       event[0].payload as mqtt.MqttPublishMessage;
+    //   final String message = mqtt.MqttPublishPayload.bytesToStringAsString(
+    //       recMess.payload.message);
+    
+    //   print('[MQTT client] MQTT message: topic is <${event[0].topic}>, '
+    //       'payload is <-- ${message} -->');
+    //   print("[MQTT client] message with topic: ${event[0].topic}");
+    //   print("[MQTT client] message with message: ${message}");
+    //   // _temp = double.parse(message);
+    //   print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx");
+    //   // setState(() {
+    //   //   _tempMassage = message;
+    //   // });
+    // }
 
     void _onDisconnected() {
       print('[MQTT client] _onDisconnected');
@@ -100,24 +131,9 @@ class _connectionPageState extends State<connectionPage> {
     }
 
     void _connect() async {
-      /// First create a client, the client is constructed with a broker name, client identifier
-      /// and port if needed. The client identifier (short ClientId) is an identifier of each MQTT
-      /// client connecting to a MQTT broker. As the word identifier already suggests, it should be unique per broker.
-      /// The broker uses it for identifying the client and the current state of the client. If you don’t need a state
-      /// to be hold by the broker, in MQTT 3.1.1 you can set an empty ClientId, which results in a connection without any state.
-      /// A condition is that clean session connect flag is true, otherwise the connection will be rejected.
-      /// The client identifier can be a maximum length of 23 characters. If a port is not specified the standard port
-      /// of 1883 is used.
-      /// If you want to use websockets rather than TCP see below.
+      if (_formKey.currentState.validate()) {}
       client = mqtt.MqttClient(_server.text, '');
       client.port = int.parse(_port.text);
-
-      /// A websocket URL must start with ws:// or wss:// or Dart will throw an exception, consult your websocket MQTT broker
-      /// for details.
-      /// To use websockets add the following lines -:
-      /// client.useWebSocket = true;
-      /// client.port = 80;  ( or whatever your WS port is)
-      /// Note do not set the secure flag if you are using wss, the secure flags is for TCP sockets only.
 
       /// Set logging on if needed, defaults to off
       client.logging(on: true);
@@ -161,6 +177,11 @@ class _connectionPageState extends State<connectionPage> {
         connectionState = mqtt.MqttConnectionState.connected;
         showToast("Connected", duration: Toast.LENGTH_LONG, gravity: 0);
         setState(() {});
+        _dataConnect.add(_server.text);
+        _dataConnect.add(_port.text);
+        _dataConnect.add(_user.text);
+        _dataConnect.add(_pass.text);
+        _saveDataConnect(_dataConnect);
       } else {
         print('[MQTT client] ERROR: MQTT client connection failed - '
             'disconnecting, state is ${client.connectionStatus}');
@@ -169,19 +190,13 @@ class _connectionPageState extends State<connectionPage> {
 
       /// The client has a change notifier object(see the Observable class) which we then listen to to get
       /// notifications of published updates to each subscribed topic.
-      subscription = client.updates.listen(_onMessage);
+      // subscription = client.updates.listen(_onMessage);
 
-      _subscribeToTopic("/ESP/LED1");
-      _subscribeToTopic("/ESP/LED2");
-    }
-
-    void _onPublish() {
-      const String pubTopic = '/ESP/LED1';
-      final mqtt.MqttClientPayloadBuilder builder =
-          mqtt.MqttClientPayloadBuilder();
-      builder.addString('${_tempMassage == "led1on" ? "led1off" : "led1on"}');
-      client.publishMessage(
-          pubTopic, mqtt.MqttQos.exactlyOnce, builder.payload);
+      // _subscribeToTopic("/esp");
+      // _subscribeToTopic("/ESP/LED1");
+      // _subscribeToTopic("/ESP/SEND1");
+      // _subscribeToTopic("/ESP/LED3");
+      // _subscribeToTopic("/ESP/LED4");
     }
 
     return Scaffold(
@@ -207,89 +222,136 @@ class _connectionPageState extends State<connectionPage> {
         ),
         body: ListView(children: <Widget>[
           new Container(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.only(left: 50.0, right: 50.0, top: 20.0),
               child: new Container(
                 child: new Center(
                   child: new Column(
                     children: [
-                      // new Padding(padding: EdgeInsets.only(top: 10.0)),
-                      new TextField(
-                        controller: _server,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                          ),
-                          labelText: 'Server',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.account_balance,
-                            color: Colors.white,
-                          ),
-                          prefixText: ' ',
-                          errorText: null,
-                          errorStyle: null,
+                      new Padding(padding: EdgeInsets.only(top: 5.0)),
+                      new Form(
+                        key: _formKey,
+                        child: Column(
+                          children: <Widget>[
+                            new TextFormField(
+                              controller: _server,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Server',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance,
+                                    color: Colors.white,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Server";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              controller: _port,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Port',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.settings_input_component,
+                                    color: Colors.white,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Port";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              controller: _user,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Username',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.account_box,
+                                    color: Colors.white,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Username";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              obscureText: true,
+                              controller: _pass,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Password',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Password";
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      //  new Padding(padding: EdgeInsets.only(top: 3.0)),
-                      new TextField(
-                        controller: _port,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                          ),
-                          labelText: 'Port',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.settings_input_component,
-                            color: Colors.white,
-                          ),
-                          prefixText: ' ',
-                          errorText: null,
-                          errorStyle: null,
-                        ),
-                      ),
-                      // new Padding(padding: EdgeInsets.only(top: 5.0)),
-                      new TextField(
-                        controller: _user,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                          ),
-                          labelText: 'Username',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.account_box,
-                            color: Colors.white,
-                          ),
-                          prefixText: ' ',
-                          errorText: null,
-                          errorStyle: null,
-                        ),
-                      ),
-                      // new Padding(padding: EdgeInsets.only(top: 5.0)),
-                      new TextField(
-                        obscureText: true,
-                        controller: _pass,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                          ),
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.lock,
-                            color: Colors.white,
-                          ),
-                          prefixText: ' ',
-                          errorText: null,
-                          errorStyle: null,
-                        ),
-                      ),
-                      new Padding(padding: EdgeInsets.only(top: 20.0)),
+                      new Padding(padding: EdgeInsets.only(top: 30.0)),
                       ButtonTheme(
                         minWidth: 150.0,
                         height: 50.0,
@@ -297,34 +359,38 @@ class _connectionPageState extends State<connectionPage> {
                           shape: new RoundedRectangleBorder(
                             borderRadius: new BorderRadius.circular(15.0),
                           ),
-                          onPressed: connectionState ==
-                                  mqtt.MqttConnectionState.connected
-                              ? _disconnect
-                              : _connect,
+                          onPressed:
+                              // () {
+                              // if (_formKey.currentState.validate()) {}
+                              connectionState ==
+                                      mqtt.MqttConnectionState.connected
+                                  ? _disconnect
+                                  : _connect,
                           child: connectionState ==
                                   mqtt.MqttConnectionState.connected
                               ? Text("Disconnect")
                               : Text("Connect"),
                           color: Colors.grey[300],
+                          // }
                         ),
                       ),
-                      new Padding(padding: EdgeInsets.only(top: 20.0)),
-                      ButtonTheme(
-                        minWidth: 150.0,
-                        height: 50.0,
-                        child: RaisedButton(
-                          shape: new RoundedRectangleBorder(
-                            borderRadius: new BorderRadius.circular(15.0),
-                          ),
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (BuildContext context) =>
-                                      testPage(client))),
-                          child: Text("go to test page"),
-                          color: Colors.grey[300],
-                        ),
-                      ),
+                      // new Padding(padding: EdgeInsets.only(top: 20.0)),
+                      // ButtonTheme(
+                      //   minWidth: 150.0,
+                      //   height: 50.0,
+                      //   child: RaisedButton(
+                      //     shape: new RoundedRectangleBorder(
+                      //       borderRadius: new BorderRadius.circular(15.0),
+                      //     ),
+                      //     onPressed: () => Navigator.push(
+                      //         context,
+                      //         MaterialPageRoute(
+                      //             builder: (BuildContext context) =>
+                      //                 testPage(client))),
+                      //     child: Text("go to test page"),
+                      //     color: Colors.grey[300],
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

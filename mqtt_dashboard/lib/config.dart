@@ -8,5 +8,5 @@ class config {
   static const int port = 14893;
   static const String clientIdentifier = 'android';
 
-  static const String API_Url = "172.25.11.99:8080";
+  static const String API_Url = "34.87.101.146:8080";
 }

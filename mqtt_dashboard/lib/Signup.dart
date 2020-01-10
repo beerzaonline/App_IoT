@@ -11,6 +11,7 @@ import 'config.dart';
 void main() => runApp(new signup());
 
 class signup extends StatelessWidget {
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   TextEditingController _username = TextEditingController();
   TextEditingController _fullName = TextEditingController();
   TextEditingController _password = TextEditingController();
@@ -48,12 +49,12 @@ class signup extends StatelessWidget {
     }
 
     void onRegister() async {
-      // bool check = _formKey.currentState.validate();
+      bool check = _formKey.currentState.validate();
       if (true) {
         var uri = Uri.http('${config.API_Url}', '/api/user/register', {
           "username": _username.text,
           "pw": _password.text,
-          "fullName": "benjawan komtabut"
+          "fullName": _fullName.text
         });
         var response = await http.get(uri, headers: {
           // HttpHeaders.authorizationHeader: 'Token $token',
@@ -90,87 +91,149 @@ class signup extends StatelessWidget {
             ),
             body: ListView(children: <Widget>[
               new Container(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.only(left: 50.0, right: 50.0, top: 20.0),
                   child: new Container(
                     child: new Center(
                       child: new Column(
                         children: [
-                          new Padding(padding: EdgeInsets.only(top: 10.0)),
-                          new TextFormField(
-                            controller: _username,
-                            style: TextStyle(color: Colors.grey),
-                            decoration: new InputDecoration(
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              labelText: 'USERNAME',
-                              labelStyle: TextStyle(color: Colors.grey),
-                              prefixIcon: const Icon(
-                                Icons.account_box,
-                                color: Colors.white70,
-                              ),
-                              prefixText: ' ',
-                              errorText: null,
-                              errorStyle: null,
+                          new Form(
+                            key: _formKey,
+                            child: Column(
+                              children: <Widget>[
+                                new Padding(
+                                    padding: EdgeInsets.only(top: 20.0)),
+                                new TextFormField(
+                                  controller: _username,
+                                  style: TextStyle(color: Colors.grey),
+                                  decoration: new InputDecoration(
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[300]),
+                                          borderRadius:
+                                              BorderRadius.circular(5.0)),
+                                      labelText: 'Username',
+                                      labelStyle: TextStyle(color: Colors.grey),
+                                      prefixIcon: const Icon(
+                                        Icons.account_box,
+                                        color: Colors.white70,
+                                      ),
+                                      errorStyle: TextStyle(color: Colors.red),
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(5.0))),
+                                  validator: (String value) {
+                                    if (value.trim().isEmpty) {
+                                      return "Please enter Username";
+                                    }
+                                  },
+                                ),
+                                new Padding(
+                                    padding: EdgeInsets.only(top: 20.0)),
+                                new TextFormField(
+                                  controller: _fullName,
+                                  style: TextStyle(color: Colors.grey),
+                                  decoration: new InputDecoration(
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[300]),
+                                          borderRadius:
+                                              BorderRadius.circular(5.0)),
+                                      labelText: 'Full Name',
+                                      labelStyle: TextStyle(color: Colors.grey),
+                                      prefixIcon: const Icon(
+                                        Icons.account_box,
+                                        color: Colors.white70,
+                                      ),
+                                      errorStyle: TextStyle(color: Colors.red),
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(5.0))),
+                                  validator: (String value) {
+                                    if (value.trim().isEmpty) {
+                                      return "Please enter Full Name";
+                                    }
+                                  },
+                                ),
+                                new Padding(
+                                    padding: EdgeInsets.only(top: 20.0)),
+                                new TextFormField(
+                                  obscureText: true,
+                                  controller: _password,
+                                  style: TextStyle(color: Colors.grey),
+                                  decoration: new InputDecoration(
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[300]),
+                                          borderRadius:
+                                              BorderRadius.circular(5.0)),
+                                      labelText: 'Password',
+                                      labelStyle: TextStyle(color: Colors.grey),
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline,
+                                        color: Colors.white70,
+                                      ),
+                                      errorStyle: TextStyle(color: Colors.red),
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(5.0))),
+                                  validator: (String value) {
+                                    if (value.trim().isEmpty) {
+                                      return "Please enter Password";
+                                    }
+                                  },
+                                ),
+                                new Padding(
+                                    padding: EdgeInsets.only(top: 20.0)),
+                                new TextFormField(
+                                  obscureText: true,
+                                  // controller: ,
+                                  style: TextStyle(color: Colors.grey),
+                                  decoration: new InputDecoration(
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide:
+                                            BorderSide(color: Colors.grey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[300]),
+                                          borderRadius:
+                                              BorderRadius.circular(5.0)),
+                                      labelText: 'Confirm Password',
+                                      labelStyle: TextStyle(color: Colors.grey),
+                                      prefixIcon: const Icon(
+                                        Icons.vpn_key,
+                                        color: Colors.white70,
+                                      ),
+                                      errorStyle: TextStyle(color: Colors.red),
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(5.0))
+                                      // prefixText: ' ',
+                                      // errorText: null,
+                                      // errorStyle: null,
+                                      ),
+                                  validator: (String value) {
+                                    if (value.trim().isEmpty) {
+                                      return "Please enter Confirm Password";
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
                           ),
-                          new Padding(padding: EdgeInsets.only(top: 10.0)),
-                          new TextFormField(
-                            controller: _fullName,
-                            style: TextStyle(color: Colors.grey),
-                            decoration: new InputDecoration(
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              labelText: 'FULL NAME',
-                              labelStyle: TextStyle(color: Colors.grey),
-                              prefixIcon: const Icon(
-                                Icons.account_box,
-                                color: Colors.white70,
-                              ),
-                              prefixText: ' ',
-                              errorText: null,
-                              errorStyle: null,
-                            ),
-                          ),
-                          new Padding(padding: EdgeInsets.only(top: 10.0)),
-                          new TextField(
-                            controller: _password,
-                            style: TextStyle(color: Colors.grey),
-                            decoration: new InputDecoration(
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              labelText: 'PASSWORD',
-                              labelStyle: TextStyle(color: Colors.grey),
-                              prefixIcon: const Icon(
-                                Icons.lock_outline,
-                                color: Colors.tealAccent,
-                              ),
-                              prefixText: ' ',
-                              errorText: null,
-                              errorStyle: null,
-                            ),
-                          ),
-                          new Padding(padding: EdgeInsets.only(top: 10.0)),
-                          new TextField(
-                            style: TextStyle(color: Colors.grey),
-                            decoration: new InputDecoration(
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              labelText: 'CONFIRM PASSWORD',
-                              labelStyle: TextStyle(color: Colors.grey),
-                              prefixIcon: const Icon(
-                                Icons.vpn_key,
-                                color: Colors.tealAccent,
-                              ),
-                              prefixText: ' ',
-                              errorText: null,
-                              errorStyle: null,
-                            ),
-                          ),
-                          new Padding(padding: EdgeInsets.only(top: 20.0)),
+                          new Padding(padding: EdgeInsets.only(top: 30.0)),
                           ButtonTheme(
                             minWidth: 150.0,
                             height: 50.0,
@@ -178,9 +241,13 @@ class signup extends StatelessWidget {
                               shape: new RoundedRectangleBorder(
                                 borderRadius: new BorderRadius.circular(15.0),
                               ),
-                              onPressed: onRegister,
-                              child: Text("SIGN UP"),
-                              color: Colors.grey,
+                              onPressed: () {
+                                if (_formKey.currentState.validate()) {
+                                  onRegister();
+                                }
+                              },
+                              child: Text("Sign up"),
+                              color: Colors.grey[300],
                             ),
                           ),
                         ],

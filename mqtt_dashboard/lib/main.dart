@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toast/toast.dart';
 import 'Dashboard.dart';
 import 'Signup.dart';
@@ -10,6 +11,7 @@ import 'config.dart';
 
 void main() {
   runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
     home: MyApp(),
     theme: ThemeData(
       cursorColor: Colors.grey,
@@ -17,10 +19,28 @@ void main() {
   ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   TextEditingController _username = TextEditingController();
   TextEditingController _password = TextEditingController();
+
+  @override
+  void initState() {
+    _getUserId().then((id) {
+      if (id != null) {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (BuildContext context) => dashboard(id, null)));
+      }
+    });
+    super.initState();
+  }
 
   void connectAPI() {
     bool check = _formKey.currentState.validate();
@@ -37,6 +57,22 @@ class MyApp extends StatelessWidget {
         print(response.body);
       });
     }
+  }
+
+  _login(int userId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt("id", userId);
+  }
+
+  _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt("id", null);
+  }
+
+  Future<int> _getUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int temp = await prefs.getInt("id");
+    return temp;
   }
 
   @override
@@ -62,7 +98,8 @@ class MyApp extends StatelessWidget {
 
         if (jsonData['status'] == 0) {
           int userId = jsonData['data'];
-          Navigator.push(
+          _login(userId);
+          Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                   builder: (BuildContext context) => dashboard(userId, null)));
@@ -75,59 +112,89 @@ class MyApp extends StatelessWidget {
       }
     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: ListView(
-        children: <Widget>[
-          new Container(
-            padding: const EdgeInsets.all(50.0),
-            child: new Center(
-              child: new Column(children: <Widget>[
-                new Padding(padding: EdgeInsets.only(top: 110.0)),
+    DateTime currentBackPressTime;
+    Future<bool> onWillPop() {
+      DateTime now = DateTime.now();
+      if (currentBackPressTime == null ||
+          now.difference(currentBackPressTime) > Duration(seconds: 2)) {
+        currentBackPressTime = now;
+        showToast("Back Agian To Exit",
+            duration: Toast.LENGTH_LONG,
+            gravity: 0,
+            backgroundColor: Colors.white54);
+        return Future.value(false);
+      }
+      return Future.value(true);
+    }
+
+    return WillPopScope(
+      onWillPop: onWillPop,
+      child: Scaffold(
+          backgroundColor: Colors.black,
+          body: ListView(
+              padding:
+                  const EdgeInsets.only(left: 50.0, right: 50.0, top: 100.0),
+              children: <Widget>[
                 new Text(
-                  'LOGO',
+                  'LOGIN',
+                  textAlign: TextAlign.center,
                   style: new TextStyle(color: Colors.grey[300], fontSize: 25.0),
                 ),
                 new Form(
                   key: _formKey,
                   child: Column(
                     children: <Widget>[
-                      new Padding(padding: EdgeInsets.only(top: 50.0)),
+                      new Padding(padding: EdgeInsets.only(top: 20.0)),
                       new TextFormField(
                         controller: _username,
                         style: TextStyle(color: Colors.grey),
                         decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
-                          ),
-                          labelText: 'Username',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                          ),
-                        ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey[300]),
+                                borderRadius: BorderRadius.circular(5.0)),
+                            labelText: 'Username',
+                            labelStyle: TextStyle(color: Colors.grey[300]),
+                            prefixIcon: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                            ),
+                            // errorStyle: TextStyle(color: Colors.red),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(5.0))),
                         validator: (String value) {
-                          return "กรุณากรอก username";
+                          if (value.trim().isEmpty) {
+                            return 'Please enter Username';
+                          }
                         },
                       ),
-                      new Padding(padding: EdgeInsets.only(top: 20.0)),
+                      new Padding(padding: EdgeInsets.only(top: 15.0)),
                       new TextFormField(
+                        obscureText: true,
                         controller: _password,
                         style: TextStyle(color: Colors.grey),
                         decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
-                          ),
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.lock,
-                            color: Colors.white,
-                          ),
-                        ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                            ),
+                            labelText: 'Password',
+                            labelStyle: TextStyle(color: Colors.grey[300]),
+                            prefixIcon: const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                            ),
+                            errorStyle: TextStyle(color: Colors.red),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(5.0))),
                         validator: (String value) {
-                          return "กรุณากรอก password";
+                          if (value.trim().isEmpty) {
+                            return 'Please enter Password';
+                          }
                         },
                       ),
                     ],
@@ -141,32 +208,30 @@ class MyApp extends StatelessWidget {
                     shape: new RoundedRectangleBorder(
                       borderRadius: new BorderRadius.circular(15.0),
                     ),
-                    onPressed: _onLogin,
+                    onPressed: () {
+                      if (_formKey.currentState.validate()) {
+                        _onLogin();
+                      }
+                    },
                     child: Text("Login"),
                     color: Colors.grey[300],
                   ),
                 ),
                 new FlatButton(
                   child: Text(
-                    'Forgot password',
+                    'Sign up',
                     style: TextStyle(color: Colors.grey[300]),
                   ),
-                  onPressed: connectAPI,
-                ),
-                new FlatButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (BuildContext context) => signup()));
-                    },
-                    child: Text(
-                      'Sign up',
-                      style: TextStyle(color: Colors.grey[300]),
-                    ))
-              ]),
-            ),
-          )
-        ],
-      ),
+                  onPressed: () {
+                    // if (_formKey.currentState.validate()) {
+                    //   // Scaffold.of(context).showSnackBar(
+                    //   //     SnackBar(content: Text('Processing Data')));
+                    // }
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (BuildContext context) => signup()));
+                  },
+                )
+              ])),
     );
   }
 }

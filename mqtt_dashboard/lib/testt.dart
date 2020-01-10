@@ -33,15 +33,14 @@ class _testPageState extends State<testPage> {
         child: Center(
           child: RaisedButton(
             child: Text('OK'),
-            onPressed: () => _onPublish("led1on"),
+            // onPressed: () => _onPublish("led1on"),
           ),
         ),
       ),
     );
   }
 
-  void _onPublish(String msg) {
-    const String pubTopic = '/ESP/LED1';
+  void _onPublish(String pubTopic,String msg) {
     final mqtt.MqttClientPayloadBuilder builder =
         mqtt.MqttClientPayloadBuilder();
     builder.addString('$msg');
