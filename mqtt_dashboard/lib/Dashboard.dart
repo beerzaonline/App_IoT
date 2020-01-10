@@ -32,7 +32,9 @@ GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 class dashboard extends StatefulWidget {
   int _userId;
   mqtt.MqttClient _client;
+
   dashboard(this._userId, this._client);
+
   //print(_temp.length);
 
   @override
@@ -44,6 +46,7 @@ class dashboard extends StatefulWidget {
 class _dashboard extends State {
   int _userId;
   mqtt.MqttClient _client;
+
   _dashboard(this._userId, this._client);
 
   List lst = List();
@@ -197,6 +200,8 @@ class _dashboard extends State {
     _tempMassage = message;
     for (var i = 0; i < _tempUI.length; i++) {
       Map<String, dynamic> data = _tempUI[i];
+      bool check = true;
+
       if (data['topic'] == "${event[0].topic}") {
         if (message != null) {
           if (message == data['onValue']) {
@@ -205,20 +210,9 @@ class _dashboard extends State {
             toggleStatus = false;
           }
 
-          if (message != data['dataNow']) {
+          if (message.toString() != data['dataNow']) {
             //Up to Api
-            http.post('${config.API_Url}/api/card/updateData', body: {
-              "idCard": data['id'],
-              "userId": _userId.toString(),
-              "dataNow": message.toString()
-            }).then((response) {
-              Map jsonData = jsonDecode(response.body);
-              if (jsonData['status'] == 0) {
-                print("====================================================================UPDATE DATA");
-              } else {
-                print("ERROR");
-              }
-            });
+            updata(data, message.toString());
           }
         }
         setState(() {
@@ -229,6 +223,27 @@ class _dashboard extends State {
     }
 
     // });
+  }
+
+  void updata(Map<String, dynamic> data, String massage) async {
+    var uri = Uri.http('${config.API_Url}', '/api/card/updateData', {
+      "idCard": data['id'].toString(),
+      "userId": _userId.toString(),
+      "dataNow": massage
+    });
+    var response = await http.get(uri, headers: {
+      // HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+    print(response.body);
+    Map jsonData = jsonDecode(response.body) as Map;
+
+    if (jsonData['status'] == 0) {
+      print(
+          "====================================================================UPDATE DATA");
+    } else {
+      print("ERROR");
+    }
   }
 
   void _listCard() async {
@@ -288,12 +303,11 @@ class _dashboard extends State {
     int _count;
     bool check = false;
 
-    if(data['dataNow'] == data['onValue']){
+    if (data['dataNow'] == data['onValue']) {
       check = true;
-    }else{
+    } else {
       check = false;
     }
-    
 
     _count = lst.length;
     setState(() {
