@@ -20,8 +20,8 @@ TextEditingController _sTextOn = TextEditingController();
 TextEditingController _sTextOff = TextEditingController();
 TextEditingController _sPublishOn = TextEditingController();
 TextEditingController _sPublishOff = TextEditingController();
-TextEditingController _sReciveOn = TextEditingController();
-TextEditingController _sReciveOff = TextEditingController();
+// TextEditingController _sReciveOn = TextEditingController();
+// TextEditingController _sReciveOff = TextEditingController();
 
 // TextEditingController _bName = TextEditingController();
 // TextEditingController _bTopic = TextEditingController();
@@ -90,8 +90,8 @@ class _dashboard extends State {
       _checkConnect = false;
     }
 
-    _getDataRecive("on").then((value) => onValue = value);
-    _getDataRecive("off").then((value) => offValue = value);
+//     _getDataRecive("on").then((value) => onValue = value);
+//     _getDataRecive("off").then((value) => offValue = value);
 
     _getDataConnect().then((data) {
       if (data.toString() != "[]") {
@@ -269,17 +269,17 @@ class _dashboard extends State {
     // _temp = double.parse(message);
     // setState(() {
     // _tempMassage = message;
-    if (message == onValue || message == offValue) {
+    if (message == "on" || message == "off") {
       for (var i = 0; i < _tempUI.length; i++) {
         Map<String, dynamic> data = _tempUI[i];
 
         // String dataValue;
         if (data['topic'] == "${event[0].topic}") {
           if (message != null) {
-            if (message == onValue) {
+            if (message == "on") {
               toggleStatus = true;
               // dataValue = data['onValue'];
-            } else if (message == offValue) {
+            } else if (message == "off") {
               toggleStatus = false;
               // dataValue = data['offValue'];
             }
@@ -773,43 +773,43 @@ class _dashboard extends State {
                               }
                             },
                           ),
-                          Padding(
-                            padding: EdgeInsets.only(top: 20),
-                            child: Text('Recive Value'),
-                          ),
-                          // Divider(
-                          //   color: Colors.red,
-                          // ),
-                          TextFormField(
-                            controller: _sReciveOn,
-                            decoration: InputDecoration(
-                              labelText: 'onValueRecive',
-                              // prefixIcon: const Icon(
-                              //   Icons.create,
-                              //   color: Colors.black,
-                              // ),
-                            ),
-                            validator: (String value) {
-                              if (value.trim().isEmpty) {
-                                return "Please Enter On Value";
-                              }
-                            },
-                          ),
-                          TextFormField(
-                            controller: _sReciveOff,
-                            decoration: InputDecoration(
-                              labelText: 'OffValueRecive',
-                              // prefixIcon: const Icon(
-                              //   Icons.create,
-                              //   color: Colors.black,
-                              // ),
-                            ),
-                            validator: (String value) {
-                              if (value.trim().isEmpty) {
-                                return "Please Enter Off Value";
-                              }
-                            },
-                          ),
+//                           Padding(
+//                             padding: EdgeInsets.only(top: 20),
+//                             child: Text('Recive Value'),
+//                           ),
+//                           // Divider(
+//                           //   color: Colors.red,
+//                           // ),
+//                           TextFormField(
+//                             controller: _sReciveOn,
+//                             decoration: InputDecoration(
+//                               labelText: 'onValueRecive',
+//                               // prefixIcon: const Icon(
+//                               //   Icons.create,
+//                               //   color: Colors.black,
+//                               // ),
+//                             ),
+//                             validator: (String value) {
+//                               if (value.trim().isEmpty) {
+//                                 return "Please Enter On Value";
+//                               }
+//                             },
+//                           ),
+//                           TextFormField(
+//                             controller: _sReciveOff,
+//                             decoration: InputDecoration(
+//                               labelText: 'OffValueRecive',
+//                               // prefixIcon: const Icon(
+//                               //   Icons.create,
+//                               //   color: Colors.black,
+//                               // ),
+//                             ),
+//                             validator: (String value) {
+//                               if (value.trim().isEmpty) {
+//                                 return "Please Enter Off Value";
+//                               }
+//                             },
+//                           ),
                           new Padding(padding: EdgeInsets.only(top: 8.0)),
                           RaisedButton(
                             child: Text('OK'),
