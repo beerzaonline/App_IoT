@@ -210,11 +210,11 @@ class _connectionPageState extends State<connectionPage> {
                 icon: Icon(Icons.arrow_back),
                 onPressed: () {
                   Navigator.pop(context);
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (BuildContext context) =>
-                              dashboard(_userId, client)));
+                  // Navigator.pushReplacement(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //         builder: (BuildContext context) =>
+                  //             dashboard(_userId, client)));
                 },
               );
             },
@@ -361,7 +361,6 @@ class _connectionPageState extends State<connectionPage> {
                           ),
                           onPressed:
                               // () {
-                              // if (_formKey.currentState.validate()) {}
                               connectionState ==
                                       mqtt.MqttConnectionState.connected
                                   ? _disconnect

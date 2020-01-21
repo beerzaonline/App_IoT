@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:mqtt_dashboard/GetResponses.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toast/toast.dart';
 import 'Connection.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
 import 'package:http/http.dart' as http;
@@ -19,59 +20,90 @@ TextEditingController _sTextOn = TextEditingController();
 TextEditingController _sTextOff = TextEditingController();
 TextEditingController _sPublishOn = TextEditingController();
 TextEditingController _sPublishOff = TextEditingController();
+TextEditingController _sReciveOn = TextEditingController();
+TextEditingController _sReciveOff = TextEditingController();
 
-TextEditingController _bName = TextEditingController();
-TextEditingController _bTopic = TextEditingController();
-TextEditingController _bTextOn = TextEditingController();
-TextEditingController _bTextOff = TextEditingController();
-TextEditingController _bPublishOn = TextEditingController();
-TextEditingController _bPublishOff = TextEditingController();
+// TextEditingController _bName = TextEditingController();
+// TextEditingController _bTopic = TextEditingController();
+// TextEditingController _bTextOn = TextEditingController();
+// TextEditingController _bTextOff = TextEditingController();
+// TextEditingController _bPublishOn = TextEditingController();
+// TextEditingController _bPublishOff = TextEditingController();
+
+TextEditingController _server = TextEditingController();
+TextEditingController _port = TextEditingController();
+TextEditingController _user = TextEditingController();
+TextEditingController _pass = TextEditingController();
+
+String clientIdentifier = 'android';
+
+mqtt.MqttConnectionState connectionState;
+
+List<String> _dataConnect = List<String>();
 
 GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+mqtt.MqttClient _client;
+
+StreamSubscription subscription;
+
+bool _checkConnect = false;
+
 class dashboard extends StatefulWidget {
   int _userId;
-  mqtt.MqttClient _client;
+  // mqtt.MqttClient _client;
 
-  dashboard(this._userId, this._client);
+  dashboard(this._userId);
 
   //print(_temp.length);
 
   @override
   State<StatefulWidget> createState() {
-    return _dashboard(_userId, _client);
+    return _dashboard(_userId);
   }
 }
 
 class _dashboard extends State {
   int _userId;
-  mqtt.MqttClient _client;
+  // mqtt.MqttClient _client;
 
-  _dashboard(this._userId, this._client);
+  _dashboard(this._userId);
 
   List lst = List();
   List _tempUI = List();
-  bool _checkConnect = false, toggleStatus = false;
+  bool toggleStatus = false;
   String _tempMassage;
-  StreamSubscription subscription;
+
+  String offValue;
+  String onValue;
 
   @override
   void initState() {
-    // print(_client.connectionStatus.state);
     if (_client != null) {
       if (_client.connectionStatus.state ==
           mqtt.MqttConnectionState.connected) {
         _checkConnect = true;
-        subscription = _client.updates.listen(_onMessage);
-        _subscribeToTopic("/ESP/LED1");
-        _subscribeToTopic("/ESP/SEND1");
       } else {
         _checkConnect = false;
       }
     } else {
       _checkConnect = false;
     }
-// this.checkData();
+
+    _getDataRecive("on").then((value) => onValue = value);
+    _getDataRecive("off").then((value) => offValue = value);
+
+    _getDataConnect().then((data) {
+      if (data.toString() != "[]") {
+        setState(() {
+          _server.text = data[0];
+          _port.text = data[1];
+          _user.text = data[2];
+          _pass.text = data[3];
+        });
+      }
+    });
+
     this._listCard();
     super.initState();
     // }
@@ -80,6 +112,28 @@ class _dashboard extends State {
   _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt("id", null);
+  }
+
+  _saveDataConnect(List<String> values) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_userId.toString(), values);
+  }
+
+  Future _getDataConnect() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> temp = await prefs.getStringList(_userId.toString());
+    return temp;
+  }
+
+  _saveDataRecive(String key, String values) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, values);
+  }
+
+  Future _getDataRecive(String key) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String temp = await prefs.getString(key);
+    return temp;
   }
 
   void _onPublish(String pubTopic, String msg) {
@@ -104,79 +158,96 @@ class _dashboard extends State {
     }
   }
 
-  void _onSwitchSave() async {
-    var uri = Uri.http('${config.API_Url}', '/api/card/save', {
-      "userId": _userId.toString(),
-      "title": _sName.text,
-      "topic": _sTopic.text,
-      "onValue": _sPublishOn.text,
-      "offValue": _sPublishOff.text
-      // "dataNow": _sPublishOff.text
-    });
-    var response = await http.get(uri, headers: {
-      // HttpHeaders.authorizationHeader: 'Token $token',
-      HttpHeaders.contentTypeHeader: 'application/json',
-    });
-    Map jsonData = jsonDecode(response.body) as Map;
+  void showToast(String msg, {int duration, int gravity}) {
+    Toast.show(msg, context, duration: duration, gravity: gravity);
+  }
 
-    if (jsonData['status'] == 0) {
-      Map<String, dynamic> data = jsonData['data'];
-      if (_checkConnect) {
-        subscription = _client.updates.listen(_onMessage);
-        _subscribeToTopic("/ESP/LED1");
-        _subscribeToTopic("/ESP/SEND1");
-      }
-      Navigator.pop(context);
-      Navigator.pop(context);
+  void _connect() async {
+    if (_formKey.currentState.validate()) {}
+    _client = mqtt.MqttClient(_server.text, '');
+    _client.port = int.parse(_port.text);
+
+    /// Set logging on if needed, defaults to off
+    _client.logging(on: true);
+
+    /// If you intend to use a keep alive value in your connect message that is not the default(60s)
+    /// you must set it here
+    _client.keepAlivePeriod = 30;
+
+    /// Add the unsolicited disconnection callback
+    _client.onDisconnected = _onDisconnected;
+
+    /// Create a connection message to use or use the default one. The default one sets the
+    /// client identifier, any supplied username/password, the default keepalive interval(60s)
+    /// and clean session, an example of a specific one below.
+    final mqtt.MqttConnectMessage connMess = mqtt.MqttConnectMessage()
+        .withClientIdentifier(clientIdentifier)
+        .startClean() // Non persistent session for testing
+        .keepAliveFor(30)
+        .withWillQos(mqtt.MqttQos.atMostOnce);
+    print('[MQTT client] MQTT client connecting....');
+    _client.connectionMessage = connMess;
+
+    /// Connect the client, any errors here are communicated by raising of the appropriate exception. Note
+    /// in some circumstances the broker will just disconnect us, see the spec about this, we however will
+    /// never send malformed messages.
+
+    try {
+      await _client.connect(_user.text, _pass.text);
+    } catch (e) {
+      print(e);
+      _disconnect();
+    }
+
+    /// Check if we are connected
+    if (_client.connectionStatus.state == mqtt.MqttConnectionState.connected) {
+      // print(
+      //     "###########################################################################");
+      // print(mqtt.MqttConnectionState.connected);
+      // print(
+      //     "###########################################################################");
+      connectionState = mqtt.MqttConnectionState.connected;
+      showToast("Connected", duration: Toast.LENGTH_LONG, gravity: 0);
+
       setState(() {
-        // lst.clear();
-        _tempUI.add(data);
-        _createSwitch(data);
+        _checkConnect = true;
       });
-      // Navigator.push(
-      //     context,
-      //     MaterialPageRoute(
-      //         builder: (BuildContext context) => dashboard(userId, null)));
+
+      _dataConnect.add(_server.text);
+      _dataConnect.add(_port.text);
+      _dataConnect.add(_user.text);
+      _dataConnect.add(_pass.text);
+      _saveDataConnect(_dataConnect);
+
+      subscription = _client.updates.listen(_onMessage);
+      for (Map<String, dynamic> data in _tempUI) {
+        _subscribeToTopic("${data['topic']}");
+      }
     } else {
-      // showToast("Username Or Password Error",
-      //     duration: Toast.LENGTH_LONG,
-      //     gravity: 0,
-      //     backgroundColor: Colors.white54);
+      print('[MQTT client] ERROR: MQTT client connection failed - '
+          'disconnecting, state is ${_client.connectionStatus}');
+      _disconnect();
     }
   }
 
-  void _onButtonSave() async {
-    var uri = Uri.http('${config.API_Url}', '/api/card/save', {
-      "userId": _userId.toString(),
-      "title": _bName.text,
-      "topic": _bTopic.text,
-      "onValue": _bPublishOn.text,
-      "offValue": _bPublishOff.text
-    });
-    var response = await http.get(uri, headers: {
-      // HttpHeaders.authorizationHeader: 'Token $token',
-      HttpHeaders.contentTypeHeader: 'application/json',
-    });
-    Map jsonData = jsonDecode(response.body) as Map;
+  void _onDisconnected() {
+    print('[MQTT client] _onDisconnected');
+    //topics.clear();
+    connectionState = mqtt.MqttConnectionState.disconnected;
+    _client = null;
+    subscription = null;
+    showToast("Disconnected", duration: Toast.LENGTH_LONG, gravity: 0);
+    print('[MQTT client] MQTT client disconnected');
+  }
 
-    if (jsonData['status'] == 0) {
-      // int userId = jsonData['data'];
-      Navigator.pop(context);
-      Navigator.pop(context);
-      setState(() {
-        lst.clear();
-        this._listCard();
-      });
-      // Navigator.push(
-      //     context,
-      //     MaterialPageRoute(
-      //         builder: (BuildContext context) => dashboard(userId, null)));
-    } else {
-      // showToast("Username Or Password Error",
-      //     duration: Toast.LENGTH_LONG,
-      //     gravity: 0,
-      //     backgroundColor: Colors.white54);
-    }
+  void _disconnect() {
+    print('[MQTT client] _disconnect()');
+    _client.disconnect();
+    // subscription.cancel();
+    setState(() {
+      _checkConnect = false;
+    });
+    _onDisconnected();
   }
 
   void _onMessage(List<mqtt.MqttReceivedMessage> event) {
@@ -197,33 +268,106 @@ class _dashboard extends State {
     print("[MQTT client] message with message: ${message}");
     // _temp = double.parse(message);
     // setState(() {
-    _tempMassage = message;
-    for (var i = 0; i < _tempUI.length; i++) {
-      Map<String, dynamic> data = _tempUI[i];
-      bool check = true;
+    // _tempMassage = message;
+    if (message == onValue || message == offValue) {
+      for (var i = 0; i < _tempUI.length; i++) {
+        Map<String, dynamic> data = _tempUI[i];
 
-      if (data['topic'] == "${event[0].topic}") {
-        if (message != null) {
-          if (message == data['onValue']) {
-            toggleStatus = true;
-          } else {
-            toggleStatus = false;
-          }
-
-          if (message.toString() != data['dataNow']) {
-            //Up to Api
+        // String dataValue;
+        if (data['topic'] == "${event[0].topic}") {
+          if (message != null) {
+            if (message == onValue) {
+              toggleStatus = true;
+              // dataValue = data['onValue'];
+            } else if (message == offValue) {
+              toggleStatus = false;
+              // dataValue = data['offValue'];
+            }
             updata(data, message.toString());
           }
+          setState(() {
+            lst.removeAt(i);
+            lst.insert(i, _bodyCard(data, i, toggleStatus));
+          });
         }
-        setState(() {
-          lst.removeAt(i);
-          lst.insert(i, _bodyCard(data, i, toggleStatus));
-        });
       }
     }
-
     // });
   }
+
+  void _onSwitchSave() async {
+    var uri = Uri.http('${config.API_Url}', '/api/card/save', {
+      "userId": _userId.toString(),
+      "title": _sName.text,
+      "topic": _sTopic.text,
+      "onValue": _sPublishOn.text,
+      "offValue": _sPublishOff.text
+      // "dataNow": _sPublishOff.text
+    });
+    var response = await http.get(uri, headers: {
+      // HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+    Map jsonData = jsonDecode(response.body) as Map;
+
+    if (jsonData['status'] == 0) {
+      Map<String, dynamic> data = jsonData['data'];
+      if (_checkConnect) {
+        _subscribeToTopic("${data['topic']}");
+      }
+      _saveDataRecive("on", _sReciveOn.text);
+      _saveDataRecive("off", _sReciveOff.text);
+      Navigator.pop(context);
+      setState(() {
+        // lst.clear();
+        _tempUI.add(data);
+        _createSwitch(data);
+      });
+      // Navigator.push(
+      //     context,
+      //     MaterialPageRoute(
+      //         builder: (BuildContext context) => dashboard(userId, null)));
+    } else {
+      // showToast("Username Or Password Error",
+      //     duration: Toast.LENGTH_LONG,
+      //     gravity: 0,
+      //     backgroundColor: Colors.white54);
+    }
+  }
+
+  // void _onButtonSave() async {
+  //   var uri = Uri.http('${config.API_Url}', '/api/card/save', {
+  //     "userId": _userId.toString(),
+  //     "title": _bName.text,
+  //     "topic": _bTopic.text,
+  //     "onValue": _bPublishOn.text,
+  //     "offValue": _bPublishOff.text
+  //   });
+  //   var response = await http.get(uri, headers: {
+  //     // HttpHeaders.authorizationHeader: 'Token $token',
+  //     HttpHeaders.contentTypeHeader: 'application/json',
+  //   });
+  //   Map jsonData = jsonDecode(response.body) as Map;
+
+  //   if (jsonData['status'] == 0) {
+  //     // int userId = jsonData['data'];
+  //     Navigator.pop(context);
+  //     Navigator.pop(context);
+  //     setState(() {
+  //       lst.clear();
+  //       this._listCard();
+  //     });
+  //     // Navigator.push(
+  //     //     context,
+  //     //     MaterialPageRoute(
+  //     //         builder: (BuildContext context) => dashboard(userId, null)));
+  //   } else {
+  //     // showToast("Username Or Password Error",
+  //     //     duration: Toast.LENGTH_LONG,
+  //     //     gravity: 0,
+  //     //     backgroundColor: Colors.white54);
+  //   }
+  // }
 
   void updata(Map<String, dynamic> data, String massage) async {
     var uri = Uri.http('${config.API_Url}', '/api/card/updateData', {
@@ -303,7 +447,7 @@ class _dashboard extends State {
     int _count;
     bool check = false;
 
-    if (data['dataNow'] == data['onValue']) {
+    if (data['dataNow'] == onValue) {
       check = true;
     } else {
       check = false;
@@ -470,153 +614,76 @@ class _dashboard extends State {
 
 // popup Select Component
 
-  Future _asyncSimpleDialog(BuildContext context) async {
-    return await showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (BuildContext context) {
-          return SimpleDialog(
-            titlePadding: EdgeInsets.fromLTRB(15.0, 24.0, 24.0, 0.0),
-            contentPadding: EdgeInsets.fromLTRB(0, 10.0, 12.0, 16.0),
-            title: const Text('Select Component'),
-            children: <Widget>[
-              SimpleDialogOption(
-                onPressed: () {
-                  _dialogButton(context);
-                  _bName.clear();
-                  _bTopic.clear();
-                  // Navigator.of(context).push(MaterialPageRoute(
-                  //     builder: (BuildContext context) => addButton()));
-                },
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.touch_app),
-                    Padding(
-                      padding: EdgeInsets.only(right: 10),
-                    ),
-                    const Text('Button'),
-                  ],
-                ),
-              ),
-              SimpleDialogOption(
-                onPressed: () {
-                  _dialogSwtich(context);
+  // Future _asyncSimpleDialog(BuildContext context) async {
+  //   return await showDialog(
+  //       context: context,
+  //       barrierDismissible: true,
+  //       builder: (BuildContext context) {
+  //         return SimpleDialog(
+  //           titlePadding: EdgeInsets.fromLTRB(15.0, 24.0, 24.0, 0.0),
+  //           contentPadding: EdgeInsets.fromLTRB(0, 10.0, 12.0, 16.0),
+  //           title: const Text('Select Component'),
+  //           children: <Widget>[
+  //             SimpleDialogOption(
+  //               onPressed: () {
+  //                 _dialogButton(context);
+  //                 _bName.clear();
+  //                 _bTopic.clear();
+  //                 // Navigator.of(context).push(MaterialPageRoute(
+  //                 //     builder: (BuildContext context) => addButton()));
+  //               },
+  //               child: Row(
+  //                 children: <Widget>[
+  //                   Icon(Icons.touch_app),
+  //                   Padding(
+  //                     padding: EdgeInsets.only(right: 10),
+  //                   ),
+  //                   const Text('Button'),
+  //                 ],
+  //               ),
+  //             ),
+  //             SimpleDialogOption(
+  //               onPressed: () {
+  //                 _dialogSwtich(context);
 
-                  // _dialogTimepicker(context);
-                  // _sName.clear();
-                  // _sTopic.clear();
+  //                 // _dialogTimepicker(context);
+  //                 // _sName.clear();
+  //                 // _sTopic.clear();
 
-                  // Navigator.of(context).push(MaterialPageRoute(
-                  //     builder: (BuildContext context) => addSwitch()));
-                },
-                child: Row(
-                  children: <Widget>[
-                    Icon(MdiIcons.toggleSwitch),
-                    Padding(
-                      padding: EdgeInsets.only(right: 10),
-                    ),
-                    const Text('Switch'),
-                  ],
-                ),
-              ),
-              SimpleDialogOption(
-                onPressed: () {
-                  // Navigator.of(context).push(MaterialPageRoute(
-                  //     builder: (BuildContext context) => addTimepicker()));
-                },
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.av_timer),
-                    Padding(
-                      padding: EdgeInsets.only(right: 10),
-                    ),
-                    const Text('TimePicker'),
-                  ],
-                ),
-              ),
-            ],
-          );
-        });
-  }
+  //                 // Navigator.of(context).push(MaterialPageRoute(
+  //                 //     builder: (BuildContext context) => addSwitch()));
+  //               },
+  //               child: Row(
+  //                 children: <Widget>[
+  //                   Icon(MdiIcons.toggleSwitch),
+  //                   Padding(
+  //                     padding: EdgeInsets.only(right: 10),
+  //                   ),
+  //                   const Text('Switch'),
+  //                 ],
+  //               ),
+  //             ),
+  //             SimpleDialogOption(
+  //               onPressed: () {
+  //                 // Navigator.of(context).push(MaterialPageRoute(
+  //                 //     builder: (BuildContext context) => addTimepicker()));
+  //               },
+  //               child: Row(
+  //                 children: <Widget>[
+  //                   Icon(Icons.av_timer),
+  //                   Padding(
+  //                     padding: EdgeInsets.only(right: 10),
+  //                   ),
+  //                   const Text('TimePicker'),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         );
+  //       });
+  // }
 
 //_dialogButton
-
-  Future<Null> _dialogButton(BuildContext context) {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text('Button'),
-        contentPadding: const EdgeInsets.fromLTRB(25, 0, 25, 8),
-        content: SingleChildScrollView(
-          child: Container(
-            child: Column(
-              children: [
-                new Form(
-                  key: _formKey,
-                  child: Column(children: <Widget>[
-                    TextFormField(
-                      controller: _bName,
-                      decoration: InputDecoration(
-                        labelText: "Name",
-                        // prefixIcon: const Icon(
-                        //   Icons.create,
-                        //   color: Colors.black,
-                        // ),
-                      ),
-                    ),
-                    TextFormField(
-                      controller: _bTopic,
-                      decoration: InputDecoration(
-                        labelText: "Topic",
-                        // prefixIcon: const Icon(
-                        //   Icons.create,
-                        //   color: Colors.black,
-                        // ),
-                      ),
-                    ),
-                    TextFormField(
-                      controller: _sPublishOn,
-                      decoration: InputDecoration(
-                        labelText: "onValue",
-                        hintText: "e.g.On,Off",
-                        hintStyle: TextStyle(color: Colors.grey[300]),
-                        // prefixIcon: const Icon(
-                        //   Icons.create,
-                        //   color: Colors.black,
-                        // ),
-                      ),
-                    ),
-                    TextFormField(
-                      controller: _sPublishOff,
-                      decoration: InputDecoration(
-                        labelText: "offValue",
-                        hintText: "e.g.On,Off",
-                        hintStyle: TextStyle(color: Colors.grey[300]),
-                        // prefixIcon: const Icon(
-                        //   Icons.create,
-                        //   color: Colors.black,
-                        // ),
-                      ),
-                    ),
-                  ]),
-                ),
-                new Padding(padding: EdgeInsets.only(top: 8.0)),
-                RaisedButton(child: Text('ok'), onPressed: _onButtonSave
-                    // () {
-                    //   _bodyButton();
-                    //   _bName.clear();
-                    //   _bTopic.clear();
-                    //   Navigator.pop(context);
-                    //   Navigator.pop(context);
-                    // },
-                    )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
 //_dialogSwtich
 
@@ -647,6 +714,11 @@ class _dashboard extends State {
                               //   color: Colors.black,
                               // ),
                             ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please enter Name";
+                              }
+                            },
                           ),
                           TextFormField(
                             controller: _sTopic,
@@ -657,6 +729,15 @@ class _dashboard extends State {
                               //   color: Colors.black,
                               // ),
                             ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please enter Topic";
+                              }
+                            },
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(top: 20),
+                            child: Text('Send Value'),
                           ),
                           TextFormField(
                             controller: _sPublishOn,
@@ -669,6 +750,11 @@ class _dashboard extends State {
                               //   color: Colors.black,
                               // ),
                             ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please enter onValue";
+                              }
+                            },
                           ),
                           TextFormField(
                             controller: _sPublishOff,
@@ -681,11 +767,57 @@ class _dashboard extends State {
                               //   color: Colors.black,
                               // ),
                             ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please enter offValue";
+                              }
+                            },
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(top: 20),
+                            child: Text('Recive Value'),
+                          ),
+                          // Divider(
+                          //   color: Colors.red,
+                          // ),
+                          TextFormField(
+                            controller: _sReciveOn,
+                            decoration: InputDecoration(
+                              labelText: 'onValueRecive',
+                              // prefixIcon: const Icon(
+                              //   Icons.create,
+                              //   color: Colors.black,
+                              // ),
+                            ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please Enter On Value";
+                              }
+                            },
+                          ),
+                          TextFormField(
+                            controller: _sReciveOff,
+                            decoration: InputDecoration(
+                              labelText: 'OffValueRecive',
+                              // prefixIcon: const Icon(
+                              //   Icons.create,
+                              //   color: Colors.black,
+                              // ),
+                            ),
+                            validator: (String value) {
+                              if (value.trim().isEmpty) {
+                                return "Please Enter Off Value";
+                              }
+                            },
                           ),
                           new Padding(padding: EdgeInsets.only(top: 8.0)),
                           RaisedButton(
                             child: Text('OK'),
-                            onPressed: _onSwitchSave
+                            onPressed: () {
+                              if (_formKey.currentState.validate()) {
+                                _onSwitchSave();
+                              }
+                            }
                             // () {
                             //   _bodySwitch();
                             //   _sName.clear();
@@ -704,6 +836,142 @@ class _dashboard extends State {
                 ),
               ),
             )));
+  }
+
+  Future<Null> _dialogConnect(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text('CONNECTION'),
+        content: SingleChildScrollView(
+          child: Container(
+            child: Column(children: [
+              new Padding(padding: EdgeInsets.only(top: 5.0)),
+              new Form(
+                key: _formKey,
+                child: Column(
+                  children: <Widget>[
+                    new TextFormField(
+                      controller: _server,
+                      style: TextStyle(color: Colors.grey),
+                      decoration: new InputDecoration(
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                              borderRadius: BorderRadius.circular(5.0)),
+                          labelText: 'Server',
+                          labelStyle: TextStyle(color: Colors.grey[300]),
+                          prefixIcon: const Icon(
+                            Icons.account_balance,
+                            color: Colors.black,
+                          ),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5.0))),
+                      validator: (String value) {
+                        if (value.trim().isEmpty) {
+                          return "Please enter Server";
+                        }
+                      },
+                    ),
+                    new Padding(padding: EdgeInsets.only(top: 20.0)),
+                    new TextFormField(
+                      controller: _port,
+                      style: TextStyle(color: Colors.grey),
+                      decoration: new InputDecoration(
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                              borderRadius: BorderRadius.circular(5.0)),
+                          labelText: 'Port',
+                          labelStyle: TextStyle(color: Colors.grey[300]),
+                          prefixIcon: const Icon(
+                            Icons.settings_input_component,
+                            color: Colors.black,
+                          ),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5.0))),
+                      validator: (String value) {
+                        if (value.trim().isEmpty) {
+                          return "Please enter Port";
+                        }
+                      },
+                    ),
+                    new Padding(padding: EdgeInsets.only(top: 20.0)),
+                    new TextFormField(
+                      controller: _user,
+                      style: TextStyle(color: Colors.grey),
+                      decoration: new InputDecoration(
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                              borderRadius: BorderRadius.circular(5.0)),
+                          labelText: 'Username',
+                          labelStyle: TextStyle(color: Colors.grey[300]),
+                          prefixIcon: const Icon(
+                            Icons.account_box,
+                            color: Colors.black,
+                          ),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5.0))),
+                      validator: (String value) {
+                        if (value.trim().isEmpty) {
+                          return "Please enter Username";
+                        }
+                      },
+                    ),
+                    new Padding(padding: EdgeInsets.only(top: 20.0)),
+                    new TextFormField(
+                      obscureText: true,
+                      controller: _pass,
+                      style: TextStyle(color: Colors.grey),
+                      decoration: new InputDecoration(
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]),
+                              borderRadius: BorderRadius.circular(5.0)),
+                          labelText: 'Password',
+                          labelStyle: TextStyle(color: Colors.grey[300]),
+                          prefixIcon: const Icon(
+                            Icons.lock,
+                            color: Colors.black,
+                          ),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5.0))),
+                      validator: (String value) {
+                        if (value.trim().isEmpty) {
+                          return "Please enter Password";
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              new Padding(padding: EdgeInsets.only(top: 30.0)),
+              ButtonTheme(
+                minWidth: 150.0,
+                height: 50.0,
+                child: RaisedButton(
+                  shape: new RoundedRectangleBorder(
+                    borderRadius: new BorderRadius.circular(15.0),
+                  ),
+                  onPressed: _checkConnect ? _disconnect : _connect,
+                  child: _checkConnect ? Text("Disconnect") : Text("Connect"),
+                  color: Colors.grey[300],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   // dialogTimepicker
@@ -807,9 +1075,10 @@ class _dashboard extends State {
               icon: Icon(MdiIcons.linkVariant),
               tooltip: 'Connection',
               onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (BuildContext context) =>
-                        connectionPage(_userId, _client)));
+                _dialogConnect(context);
+                // return showDialog(
+                //     context: context,
+                //     builder: (_) => DialogConnection(_userId));
               }),
           IconButton(
             icon: Icon(Icons.exit_to_app),
@@ -830,7 +1099,7 @@ class _dashboard extends State {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          _asyncSimpleDialog(context);
+          _dialogSwtich(context);
         },
         child: Icon(Icons.add),
         backgroundColor: Colors.black,

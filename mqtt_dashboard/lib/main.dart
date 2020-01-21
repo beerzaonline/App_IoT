@@ -36,7 +36,7 @@ class _MyAppState extends State<MyApp> {
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-                builder: (BuildContext context) => dashboard(id, null)));
+                builder: (BuildContext context) => dashboard(id)));
       }
     });
     super.initState();
@@ -102,7 +102,7 @@ class _MyAppState extends State<MyApp> {
           Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (BuildContext context) => dashboard(userId, null)));
+                  builder: (BuildContext context) => dashboard(userId)));
         } else {
           showToast("Username Or Password Error",
               duration: Toast.LENGTH_LONG,
@@ -130,108 +130,125 @@ class _MyAppState extends State<MyApp> {
     return WillPopScope(
       onWillPop: onWillPop,
       child: Scaffold(
+          resizeToAvoidBottomPadding: true,
           backgroundColor: Colors.black,
-          body: ListView(
-              padding:
-                  const EdgeInsets.only(left: 50.0, right: 50.0, top: 100.0),
-              children: <Widget>[
-                new Text(
-                  'LOGIN',
-                  textAlign: TextAlign.center,
-                  style: new TextStyle(color: Colors.grey[300], fontSize: 25.0),
-                ),
-                new Form(
-                  key: _formKey,
-                  child: Column(
+          body: ListView(children: <Widget>[
+            Container(
+                width: MediaQuery.of(context).size.width,
+                padding: EdgeInsets.all(60),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
+                      Image.asset(
+                        'assets/images/iotboot.png',
+                        height: 120,
+                        width: 220,
+                        alignment : Alignment.bottomCenter,
+                      ),
                       new Padding(padding: EdgeInsets.only(top: 20.0)),
-                      new TextFormField(
-                        controller: _username,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              controller: _username,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Username',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                  ),
+                                  // errorStyle: TextStyle(color: Colors.red),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return 'Please enter Username';
+                                }
+                              },
                             ),
-                            enabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey[300]),
-                                borderRadius: BorderRadius.circular(5.0)),
-                            labelText: 'Username',
-                            labelStyle: TextStyle(color: Colors.grey[300]),
-                            prefixIcon: const Icon(
-                              Icons.person,
-                              color: Colors.white,
+                            new Padding(padding: EdgeInsets.only(top: 15.0)),
+                            new TextFormField(
+                              obscureText: true,
+                              controller: _password,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  labelText: 'Password',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white,
+                                  ),
+                                  errorStyle: TextStyle(color: Colors.red),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return 'Please enter Password';
+                                }
+                              },
                             ),
-                            // errorStyle: TextStyle(color: Colors.red),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(5.0))),
-                        validator: (String value) {
-                          if (value.trim().isEmpty) {
-                            return 'Please enter Username';
-                          }
-                        },
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            ButtonTheme(
+                              minWidth: 150.0,
+                              height: 50.0,
+                              child: RaisedButton(
+                                shape: new RoundedRectangleBorder(
+                                  borderRadius: new BorderRadius.circular(15.0),
+                                ),
+                                onPressed: () {
+                                  if (_formKey.currentState.validate()) {
+                                    _onLogin();
+                                  }
+                                },
+                                child: Text("Login"),
+                                color: Colors.grey[300],
+                              ),
+                            ),
+                            new FlatButton(
+                              child: Text(
+                                'Sign up',
+                                style: TextStyle(color: Colors.grey[300]),
+                              ),
+                              onPressed: () {
+                                // if (_formKey.currentState.validate()) {
+                                //   // Scaffold.of(context).showSnackBar(
+                                //   //     SnackBar(content: Text('Processing Data')));
+                                // }
+                                Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (BuildContext context) =>
+                                        signup()));
+                              },
+                            )
+                          ],
+                        ),
                       ),
-                      new Padding(padding: EdgeInsets.only(top: 15.0)),
-                      new TextFormField(
-                        obscureText: true,
-                        controller: _password,
-                        style: TextStyle(color: Colors.grey),
-                        decoration: new InputDecoration(
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                            ),
-                            labelText: 'Password',
-                            labelStyle: TextStyle(color: Colors.grey[300]),
-                            prefixIcon: const Icon(
-                              Icons.lock,
-                              color: Colors.white,
-                            ),
-                            errorStyle: TextStyle(color: Colors.red),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(5.0))),
-                        validator: (String value) {
-                          if (value.trim().isEmpty) {
-                            return 'Please enter Password';
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                new Padding(padding: EdgeInsets.only(top: 20.0)),
-                ButtonTheme(
-                  minWidth: 150.0,
-                  height: 50.0,
-                  child: RaisedButton(
-                    shape: new RoundedRectangleBorder(
-                      borderRadius: new BorderRadius.circular(15.0),
-                    ),
-                    onPressed: () {
-                      if (_formKey.currentState.validate()) {
-                        _onLogin();
-                      }
-                    },
-                    child: Text("Login"),
-                    color: Colors.grey[300],
-                  ),
-                ),
-                new FlatButton(
-                  child: Text(
-                    'Sign up',
-                    style: TextStyle(color: Colors.grey[300]),
-                  ),
-                  onPressed: () {
-                    // if (_formKey.currentState.validate()) {
-                    //   // Scaffold.of(context).showSnackBar(
-                    //   //     SnackBar(content: Text('Processing Data')));
-                    // }
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (BuildContext context) => signup()));
-                  },
-                )
-              ])),
+                    ])),
+          ])),
     );
   }
 }
