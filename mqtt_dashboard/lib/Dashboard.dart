@@ -315,8 +315,8 @@ class _dashboard extends State {
       if (_checkConnect) {
         _subscribeToTopic("${data['topic']}");
       }
-      _saveDataRecive("on", _sReciveOn.text);
-      _saveDataRecive("off", _sReciveOff.text);
+//       _saveDataRecive("on", _sReciveOn.text);
+//       _saveDataRecive("off", _sReciveOff.text);
       Navigator.pop(context);
       setState(() {
         // lst.clear();
