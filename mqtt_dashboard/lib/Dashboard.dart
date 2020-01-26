@@ -7,7 +7,6 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:mqtt_dashboard/GetResponses.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toast/toast.dart';
-import 'Connection.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
 import 'package:http/http.dart' as http;
 import 'config.dart';
@@ -40,6 +39,8 @@ String clientIdentifier = 'android';
 mqtt.MqttConnectionState connectionState;
 
 List<String> _dataConnect = List<String>();
+
+List<String> _dataSwitch = List<String>();
 
 GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -133,6 +134,17 @@ class _dashboard extends State {
   Future _getDataRecive(String key) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String temp = await prefs.getString(key);
+    return temp;
+  }
+
+  _saveDataSwitch(List<String> values) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_userId.toString(), values);
+  }
+
+  Future _getDataSwitch() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> temp = await prefs.getStringList(_userId.toString());
     return temp;
   }
 
@@ -335,40 +347,7 @@ class _dashboard extends State {
     }
   }
 
-  // void _onButtonSave() async {
-  //   var uri = Uri.http('${config.API_Url}', '/api/card/save', {
-  //     "userId": _userId.toString(),
-  //     "title": _bName.text,
-  //     "topic": _bTopic.text,
-  //     "onValue": _bPublishOn.text,
-  //     "offValue": _bPublishOff.text
-  //   });
-  //   var response = await http.get(uri, headers: {
-  //     // HttpHeaders.authorizationHeader: 'Token $token',
-  //     HttpHeaders.contentTypeHeader: 'application/json',
-  //   });
-  //   Map jsonData = jsonDecode(response.body) as Map;
-
-  //   if (jsonData['status'] == 0) {
-  //     // int userId = jsonData['data'];
-  //     Navigator.pop(context);
-  //     Navigator.pop(context);
-  //     setState(() {
-  //       lst.clear();
-  //       this._listCard();
-  //     });
-  //     // Navigator.push(
-  //     //     context,
-  //     //     MaterialPageRoute(
-  //     //         builder: (BuildContext context) => dashboard(userId, null)));
-  //   } else {
-  //     // showToast("Username Or Password Error",
-  //     //     duration: Toast.LENGTH_LONG,
-  //     //     gravity: 0,
-  //     //     backgroundColor: Colors.white54);
-  //   }
-  // }
-
+  
   void updata(Map<String, dynamic> data, String massage) async {
     var uri = Uri.http('${config.API_Url}', '/api/card/updateData', {
       "idCard": data['id'].toString(),
@@ -447,7 +426,7 @@ class _dashboard extends State {
     int _count;
     bool check = false;
 
-    if (data['dataNow'] == onValue) {
+    if (data['dataNow'] == "on") {
       check = true;
     } else {
       check = false;
@@ -563,7 +542,9 @@ class _dashboard extends State {
           return SimpleDialog(
             children: <Widget>[
               SimpleDialogOption(
-                onPressed: () {},
+                onPressed: () {
+                  _dialogSwtich(context);
+                },
                 child: Row(
                   children: <Widget>[
                     Icon(Icons.create),
@@ -575,7 +556,45 @@ class _dashboard extends State {
                 ),
               ),
               SimpleDialogOption(
-                onPressed: () async {
+                onPressed: () {
+                  _dialogdelete(context,idCard);
+                },
+                child: Row(
+                  children: <Widget>[
+                    Icon(MdiIcons.delete),
+                    Padding(
+                      padding: EdgeInsets.only(right: 10),
+                    ),
+                    const Text('Delete'),
+                  ],
+                ),
+              ),
+            ],
+          );
+        });
+  }
+
+  // dialogdelete
+
+  Future<Null> _dialogdelete(BuildContext context, int idCard) {
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+              title: Text("Delete", textAlign: TextAlign.center),
+              content: Text("Are you sure you want to delete ? ",
+                  textAlign: TextAlign.center),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text("Cancle"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                ),
+                FlatButton(
+                  child: Text("Delete"),
+                  onPressed: () 
+                    async {
                   GetResponses obj = GetResponses();
                   Map res = await obj.Get(
                       url: "/api/card/delete",
@@ -595,95 +614,15 @@ class _dashboard extends State {
                       }
                     }
                     Navigator.pop(context);
+                    Navigator.pop(context);
                   } else {}
                 },
-                child: Row(
-                  children: <Widget>[
-                    Icon(MdiIcons.delete),
-                    Padding(
-                      padding: EdgeInsets.only(right: 10),
-                    ),
-                    const Text('Delete'),
-                  ],
-                ),
-              ),
-            ],
-          );
-        });
+
+                  
+                )
+              ],
+            ));
   }
-
-// popup Select Component
-
-  // Future _asyncSimpleDialog(BuildContext context) async {
-  //   return await showDialog(
-  //       context: context,
-  //       barrierDismissible: true,
-  //       builder: (BuildContext context) {
-  //         return SimpleDialog(
-  //           titlePadding: EdgeInsets.fromLTRB(15.0, 24.0, 24.0, 0.0),
-  //           contentPadding: EdgeInsets.fromLTRB(0, 10.0, 12.0, 16.0),
-  //           title: const Text('Select Component'),
-  //           children: <Widget>[
-  //             SimpleDialogOption(
-  //               onPressed: () {
-  //                 _dialogButton(context);
-  //                 _bName.clear();
-  //                 _bTopic.clear();
-  //                 // Navigator.of(context).push(MaterialPageRoute(
-  //                 //     builder: (BuildContext context) => addButton()));
-  //               },
-  //               child: Row(
-  //                 children: <Widget>[
-  //                   Icon(Icons.touch_app),
-  //                   Padding(
-  //                     padding: EdgeInsets.only(right: 10),
-  //                   ),
-  //                   const Text('Button'),
-  //                 ],
-  //               ),
-  //             ),
-  //             SimpleDialogOption(
-  //               onPressed: () {
-  //                 _dialogSwtich(context);
-
-  //                 // _dialogTimepicker(context);
-  //                 // _sName.clear();
-  //                 // _sTopic.clear();
-
-  //                 // Navigator.of(context).push(MaterialPageRoute(
-  //                 //     builder: (BuildContext context) => addSwitch()));
-  //               },
-  //               child: Row(
-  //                 children: <Widget>[
-  //                   Icon(MdiIcons.toggleSwitch),
-  //                   Padding(
-  //                     padding: EdgeInsets.only(right: 10),
-  //                   ),
-  //                   const Text('Switch'),
-  //                 ],
-  //               ),
-  //             ),
-  //             SimpleDialogOption(
-  //               onPressed: () {
-  //                 // Navigator.of(context).push(MaterialPageRoute(
-  //                 //     builder: (BuildContext context) => addTimepicker()));
-  //               },
-  //               child: Row(
-  //                 children: <Widget>[
-  //                   Icon(Icons.av_timer),
-  //                   Padding(
-  //                     padding: EdgeInsets.only(right: 10),
-  //                   ),
-  //                   const Text('TimePicker'),
-  //                 ],
-  //               ),
-  //             ),
-  //           ],
-  //         );
-  //       });
-  // }
-
-//_dialogButton
 
 //_dialogSwtich
 
@@ -974,80 +913,39 @@ class _dashboard extends State {
     );
   }
 
-  // dialogTimepicker
+  // dialoglogout
 
-  // Future<Null> _dialogTimepicker(BuildContext context) {
-  //   return showDialog(
-  //     context: context,
-  //     builder: (BuildContext context) => AlertDialog(
-  //       title: Text('Swtich'),
-  //       content: SingleChildScrollView(
-  //         child: Container(
-  //           child: Column(
-  //             children: [
-  //               new Form(
-  //                   key: _formKey,
-  //                   child: Column(children: <Widget>[
-  //                     TextFormField(
-  //                       controller: _sName,
-  //                       decoration: InputDecoration(
-  //                         hintText: "Name",
-  //                         prefixIcon: const Icon(
-  //                           Icons.create,
-  //                           color: Colors.black,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     new Padding(padding: EdgeInsets.only(top: 5.0)),
-  //                     TextFormField(
-  //                       controller: _sTopic,
-  //                       decoration: InputDecoration(
-  //                         hintText: "Topic",
-  //                         prefixIcon: const Icon(
-  //                           Icons.create,
-  //                           color: Colors.black,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     new Padding(padding: EdgeInsets.only(top: 5.0)),
-  //                     TextFormField(
-  //                       decoration: InputDecoration(
-  //                         hintText: "test",
-  //                         prefixIcon: const Icon(
-  //                           Icons.create,
-  //                           color: Colors.black,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     new Padding(padding: EdgeInsets.only(top: 5.0)),
-  //                     TextFormField(
-  //                       decoration: InputDecoration(
-  //                         hintText: "test",
-  //                         prefixIcon: const Icon(
-  //                           Icons.create,
-  //                           color: Colors.black,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     new Padding(padding: EdgeInsets.only(top: 5.0)),
-  //                     RaisedButton(
-  //                       child: Text('ok'),
-  //                       onPressed: () {
-  //                         // _bodySwitch();
-  //                         // _sname.clear();
-  //                         // _stopic.clear();
-  //                         Navigator.pop(context);
-  //                         Navigator.pop(context);
-  //                       },
-  //                     )
-  //                   ]))
-  //             ],
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
+  Future<Null> _dialoglogout(BuildContext context) {
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+              title: Text("Logout", textAlign: TextAlign.center),
+              content: Text("Are you sure you want to logout ? ",
+                  textAlign: TextAlign.center),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text("Cancle"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                FlatButton(
+                  child: Text("Logout"),
+                  onPressed: () {
+                    _logout();
+                    _checkConnect ? _client.disconnect() : null;
+                    _client = null;
+                    subscription = null;
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (BuildContext context) => MyApp()));
+                  },
+                )
+              ],
+            ));
+  }
 
   Widget bodyBuild(BuildContext contex, int index) {
     return lst[index];
@@ -1084,15 +982,7 @@ class _dashboard extends State {
             icon: Icon(Icons.exit_to_app),
             tooltip: 'Logout',
             onPressed: () {
-              _logout();
-              _checkConnect ? _client.disconnect() : null;
-              _client = null;
-              subscription = null;
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (BuildContext context) => MyApp()));
+              _dialoglogout(context);
             },
           ),
         ],
@@ -1109,63 +999,6 @@ class _dashboard extends State {
         itemBuilder: bodyBuild,
         itemCount: lst.length,
       ),
-
-//ส่วนข้อมูลผู้ใช้งาน
-      // drawer: new Container(
-      //   constraints: new BoxConstraints.expand(
-      //     width: MediaQuery.of(context).size.width - 130,
-      //   ),
-      //   color: Colors.white,
-      //   alignment: Alignment.center,
-      //   child: new ListView(
-      //     padding: EdgeInsets.zero,
-      //     children: <Widget>[
-      //       new DrawerHeader(
-      //       padding: const EdgeInsets.all(0.0),
-      //       child: new UserAccountsDrawerHeader(
-      //       accountName: new Text(
-      //         'Someusername',
-      //         style: TextStyle(color: Colors.grey[300]),
-      //       ),
-      //       accountEmail: new Text(
-      //         'Someemail@flutter.com',
-      //         style: TextStyle(color: Colors.grey[300]),
-      //       ),
-      //       currentAccountPicture: FlutterLogo(),
-      //         decoration: new BoxDecoration(
-      //           color: Colors.white,
-      //         ),
-      //       ),
-      //       decoration: new BoxDecoration(color: Colors.white)
-      //       ),
-      //       new ListTile(
-      //           leading: new Icon(Icons.link),
-      //           title: new Text("Connection"),
-      //           onTap: () {
-      //             Navigator.of(context).push(MaterialPageRoute(
-      //                 builder: (BuildContext context) =>
-      //                     connectionPage(_userId, _client)));
-      //           }),
-      //       new ListTile(
-      //           leading: new Icon(Icons.exit_to_app),
-      //           title: new Text("Logout"),
-      //           onTap: () {
-      //             _logout();
-      //             Navigator.pop(context);
-      //             Navigator.pushReplacement(
-      //                 context,
-      //                 MaterialPageRoute(
-      //                     builder: (BuildContext context) => MyApp()));
-      //           }),
-      //       new ListTile(
-      //           leading: new Icon(Icons.close),
-      //           title: new Text("Close"),
-      //           onTap: () {
-      //             Navigator.pop(context);
-      //           }),
-      //     ],
-      //   ),
-      // )
     );
   }
 }
