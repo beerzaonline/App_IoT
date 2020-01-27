@@ -52,6 +52,7 @@ bool _checkConnect = false;
 
 class dashboard extends StatefulWidget {
   int _userId;
+
   // mqtt.MqttClient _client;
 
   dashboard(this._userId);
@@ -66,6 +67,7 @@ class dashboard extends StatefulWidget {
 
 class _dashboard extends State {
   int _userId;
+
   // mqtt.MqttClient _client;
 
   _dashboard(this._userId);
@@ -295,6 +297,11 @@ class _dashboard extends State {
               toggleStatus = false;
               // dataValue = data['offValue'];
             }
+//            print("OLD ${_tempUI[i]}");
+            data['dataNow'] = toggleStatus ? "on" : "off";
+            _tempUI.removeAt(i);
+            _tempUI.insert(i, data);
+//            print("NOW ${_tempUI[i]}");
             updata(data, message.toString());
           }
           setState(() {
@@ -347,7 +354,66 @@ class _dashboard extends State {
     }
   }
 
-  
+  void _onSwitchEdit(int id, String dataNow) async {
+    var uri = Uri.http('${config.API_Url}', '/api/card/edit', {
+      "id": id.toString(),
+      "userId": _userId.toString(),
+      "title": _sName.text,
+      "topic": _sTopic.text,
+      "onValue": _sPublishOn.text,
+      "offValue": _sPublishOff.text,
+      "dataNow": dataNow
+    });
+    var response = await http.get(uri, headers: {
+      // HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+    print(response.body);
+    Map jsonData = jsonDecode(response.body) as Map;
+
+    if (jsonData['status'] == 0) {
+      Iterable search =
+          _tempUI.where((a) => a['id'].toString().contains(id.toString()));
+      Map<String, dynamic> dataMap = search.toList()[0];
+
+      if (dataMap['topic'] != _sTopic.text) {
+        if (_checkConnect) {
+          _subscribeToTopic("${_sTopic.text}");
+        }
+      }
+
+      var dataString = {
+        "id": id,
+        "userId": _userId,
+        "title": _sName.text,
+        "topic": _sTopic.text,
+        "onValue": _sPublishOn.text,
+        "offValue": _sPublishOff.text,
+        "dataNow": dataNow
+      };
+
+      print("DATASTRING ${dataString}");
+      int index = _tempUI.indexOf(dataMap);
+      _tempUI.removeAt(index);
+      _tempUI.insert(index, dataString);
+      Map<String, dynamic> test = dataString;
+
+      setState(() {
+        lst.removeAt(index);
+        lst.insert(
+            index, _bodyCard(test, index, dataNow == "on" ? true : false));
+      });
+
+      Navigator.pop(context);
+      Navigator.pop(context);
+    } else {
+      // showToast("Username Or Password Error",
+      //     duration: Toast.LENGTH_LONG,
+      //     gravity: 0,
+      //     backgroundColor: Colors.white54);
+    }
+  }
+
   void updata(Map<String, dynamic> data, String massage) async {
     var uri = Uri.http('${config.API_Url}', '/api/card/updateData', {
       "idCard": data['id'].toString(),
@@ -363,7 +429,7 @@ class _dashboard extends State {
 
     if (jsonData['status'] == 0) {
       print(
-          "====================================================================UPDATE DATA");
+          "==================================UPDATE DATA==================================");
     } else {
       print("ERROR");
     }
@@ -382,36 +448,13 @@ class _dashboard extends State {
 
     if (jsonData['status'] == 0) {
       List temp = jsonData['data'];
+      temp.sort((a, b) => a['id'].toString().compareTo(b['id'].toString()));
+
       for (var i = 0; i < temp.length; i++) {
         Map<String, dynamic> data = temp[i];
         _tempUI.add(data);
-        // _bodyButton(data);
         _createSwitch(data);
       }
-
-      // Card tempCard = Card();
-      // ListTile tempTitle = ListTile();
-      // Text tempTopic;
-      // String str = "led1on";
-      // for (var i = 0; i < lst.length; i++) {
-      //   tempCard = lst[i];
-      //   tempTitle = tempCard.child;
-      //   tempTopic = tempTitle.trailing;
-      //   // Map<String,dynamic> tempData = {"asss":};
-      //   // print("topic = ${tempTopic.data.substring(8)}");
-      //   // print(str.substring(3,4));
-      //   if(tempTopic.data.substring(8) == str.substring(3,4)){
-      //     if(str == "led1on"){
-
-      //     }
-      //   }
-      // }
-      // int userId = jsonData['data'];
-      // Navigator.push(
-      //     context,
-      //     MaterialPageRoute(
-      //         builder: (BuildContext context) => dashboard(userId, null)));
-
     } else {
       // showToast("Username Or Password Error",
       //     duration: Toast.LENGTH_LONG,
@@ -424,7 +467,7 @@ class _dashboard extends State {
 
   void _createSwitch(Map<String, dynamic> data) {
     int _count;
-    bool check = false;
+    bool check;
 
     if (data['dataNow'] == "on") {
       check = true;
@@ -543,7 +586,7 @@ class _dashboard extends State {
             children: <Widget>[
               SimpleDialogOption(
                 onPressed: () {
-                  _dialogSwtich(context);
+                  _dialogSwtich(context, idCard);
                 },
                 child: Row(
                   children: <Widget>[
@@ -557,7 +600,7 @@ class _dashboard extends State {
               ),
               SimpleDialogOption(
                 onPressed: () {
-                  _dialogdelete(context,idCard);
+                  _dialogdelete(context, idCard);
                 },
                 child: Row(
                   children: <Widget>[
@@ -593,32 +636,29 @@ class _dashboard extends State {
                 ),
                 FlatButton(
                   child: Text("Delete"),
-                  onPressed: () 
-                    async {
-                  GetResponses obj = GetResponses();
-                  Map res = await obj.Get(
-                      url: "/api/card/delete",
-                      body: {"idCard": idCard.toString()});
-                  if (res['status'] == 0) {
-                    if (_tempUI.isNotEmpty && _tempUI != null) {
-                      for (var i = 0; i < _tempUI.length; i++) {
-                        Map<String, dynamic> data = _tempUI[i];
-                        if (data['id'] == idCard) {
-                          _tempUI.removeAt(i);
-                          setState(() {
-                            lst.removeAt(i);
-                            // lst.clear();
-                            // this._listCard();
-                          });
+                  onPressed: () async {
+                    GetResponses obj = GetResponses();
+                    Map res = await obj.Get(
+                        url: "/api/card/delete",
+                        body: {"idCard": idCard.toString()});
+                    if (res['status'] == 0) {
+                      if (_tempUI.isNotEmpty && _tempUI != null) {
+                        for (var i = 0; i < _tempUI.length; i++) {
+                          Map<String, dynamic> data = _tempUI[i];
+                          if (data['id'] == idCard) {
+                            _tempUI.removeAt(i);
+                            setState(() {
+                              lst.removeAt(i);
+                              // lst.clear();
+                              // this._listCard();
+                            });
+                          }
                         }
                       }
-                    }
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                  } else {}
-                },
-
-                  
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    } else {}
+                  },
                 )
               ],
             ));
@@ -626,11 +666,25 @@ class _dashboard extends State {
 
 //_dialogSwtich
 
-  Future<Null> _dialogSwtich(BuildContext context) {
-    _sName.clear();
-    _sTopic.clear();
-    _sPublishOn.clear();
-    _sPublishOff.clear();
+  Future<Null> _dialogSwtich(BuildContext context, int idCard) {
+    String _dataNow;
+    if (idCard == null) {
+      _sName.clear();
+      _sTopic.clear();
+      _sPublishOn.clear();
+      _sPublishOff.clear();
+    } else {
+      Iterable search =
+          _tempUI.where((a) => a['id'].toString().contains(idCard.toString()));
+      Map<String, dynamic> dataMap = search.toList()[0];
+      setState(() {
+        _sName.text = dataMap['title'].toString();
+        _sTopic.text = dataMap['topic'].toString();
+        _sPublishOn.text = dataMap['onValue'].toString();
+        _sPublishOff.text = dataMap['offValue'].toString();
+      });
+      _dataNow = dataMap['dataNow'];
+    }
     return showDialog(
         context: context,
         builder: (BuildContext context) => AlertDialog(
@@ -754,7 +808,9 @@ class _dashboard extends State {
                             child: Text('OK'),
                             onPressed: () {
                               if (_formKey.currentState.validate()) {
-                                _onSwitchSave();
+                                idCard == null
+                                    ? _onSwitchSave()
+                                    : _onSwitchEdit(idCard, _dataNow);
                               }
                             }
                             // () {
@@ -989,7 +1045,7 @@ class _dashboard extends State {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          _dialogSwtich(context);
+          _dialogSwtich(context, null);
         },
         child: Icon(Icons.add),
         backgroundColor: Colors.black,
