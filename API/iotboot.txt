@@ -1,0 +1,600 @@
+35.198.211.244
+9|:3b}lMK%~XyOn
+
+traefik:
+    image: traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml:ro
+      - ./traefik/acme:/etc/traefik/acme
+    networks:
+      - net
+    ports:
+     - 80:80
+     - 443:443
+     - 8080:8080
+
+labels:
+      - traefik.backend=app
+      - "traefik.frontend.rule=Host:iotboot.com, www.iotboot.com"
+      - traefik.docker.network=iotboot_net
+      - traefik.port=8080
+      - traefik.enable=true
+
+
+
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: iotbootdb
+
+
+run app.jar : mvn -DskipTests clean package
+
+Swi9H1CjqsvoXpx9mKGY
+
+https://gitlab.com/chaluemwut/iotboot
+
+INSERT INTO acls (username, topic, rw) VALUES ('aaa', '/esp', 1);
+
+benjawan_ktb@iotboot:~/iotboot$ sudo docker exec -it df11f53435d4 bash
+root@df11f53435d4:/# mysql -u root -p
+Enter password: root_paaaword
+mysql> show databases;
+mysql> use iotbootdb;
+mysql> show tables;
+
+
+  1  ls
+    2  pwd
+    3  git clone https://gitlab.com/chaluemwut/iotboot
+    4  ls
+    5  cd iotboot/
+    6  ls
+    7  sudo apt-get update
+    8  sudo apt-get install     apt-transport-https     ca-certificates     curl     gnupg-agent     software-prope
+rties-common
+    9  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+   10  sudo apt-key fingerprint 0EBFCD88
+   11  sudo add-apt-repository    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   12     $(lsb_release -cs) \
+   13     stable"
+   14  sudo apt-get update
+   15  sudo apt-get install docker-ce docker-ce-cli containerd.io
+   16  sudo docker version
+   17  sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname 
+-m)" -o /usr/local/bin/docker-compose
+   18  sudo chmod +x /usr/local/bin/docker-compose
+   19  ls
+   20  sudo docker-compose version
+   21  ls
+   22  git pull
+   23  ls
+   24  cd mqtt
+   25  ls
+   26  cd 1.4
+   27  ls
+   28  sudo docker build -t chaluemwut/mqtt .
+   29  ls
+   30  cd ..
+   31  ls
+   32  cp mosquitto.conf 1.4/
+   33  ls
+   34  cd 1.4
+   35  ls
+   36  sudo docker build -t chaluemwut/mqtt .
+   37  sudo docker images
+   38  cd ..
+   39  ls
+   40  cd ..
+   41  ls
+   42  sudo docker-compose build
+   43  sudo docker-compose up -d
+   44  sudo docker-compose ps
+   45  sudo docker-compose logs -f mqtt
+   46  ls
+   47  sudo docker-compose ps
+   48  sudo docker-compose logs -f app
+   49  sudo docker-compose ps
+   50  sudo docker-compose run mqtt bash
+   51  sudo docker-compose logs mqtt
+   52  sudo docker-compose run mqtt bash
+   53  git pull
+   54  cd mqtt
+   55  ls
+   56  cd 1.4
+   57  ls
+58  sudo docker build -t chaluemwut/mqtt .
+   59  cd
+   60  ls
+   61  cd iotboot/
+   62  ls
+   63  sudo docker-compose stop
+   64  sudo docker-compose rm -f
+   65  sudo docker-compose build
+   66  sudo docker-compose up -d
+   67  sudo docker-compose ps
+   68  sudo docker-compose logs mqtt
+   69  sudo docker-compose run mqtt bash
+   70  ls
+   71  sudo docker-compose ps
+   72  sudo docker-compose exec mysql bash
+   73  ls
+   74  sudo docker-compose ps
+   75  sudo docker-compose run mysql bash
+   76  sudo docker-compose run mqtt bash
+   77  git pull
+   78  ls
+   79  sudo docker-compose stop
+   80  sudo docker-compose rm -f
+   81  sudo docker-compose bu
+   82  ls
+   83  cd mqtt/1.4
+   84  ls
+   85  sudo docker build -t chaluemwut/mqtt .
+   86  cd
+   87  cd iotboot/
+   88  ls
+   98  sudo apt-get purge phpmyadmin 
+   99  sudo apt-get install phpmyadmin 
+  100  sudo systemctl restart apache2
+  101  sudo nano /etc/apache2/conf-available/phpmyadmin.conf
+  102  php -v
+  103  sudo mysql_secure_installation
+  104  sudo systemctl restart apache2
+  105  mysql -u root -p
+  106  sudo mysql -u root -p
+  107  sudo apt-get purge phpmyadmin 
+  108  sudo apt-get install phpmyadmin 
+  109  ls
+  110  cd iotboot/
+  111  cd dist/
+  112  cd app/
+  113  ls
+  114  ls -l
+  115  cd
+  116  hitory
+  117  sudo hitory
+  118  sudo history
+  119  history
+  120  cd iotboot/
+  121  ls
+  122  cd iotboot/
+  123  ls
+  124  cd ..
+  125  cd mqtt/
+  126  ls
+  127  cd1.4 
+  128  cd 1.4 
+  129  ls
+  130  sudo docker build -t chaluemwut/mqtt .
+  131  cd
+  132  cd iotboot/
+  133  sudo docker-compose ps
+  134  sudo docker-compose build
+  135  cd mqtt/
+  136  cd a.4
+  137  cd 1.4
+  138  sudo docker images
+  139  ls
+  140  cd
+  152  ls
+  153  cd resources/
+  154  ls
+  155  sudo nano application.properties 
+  156  cd ..
+  157  ls
+  158  mvn -Dmaven.test.Skip=true clean package
+  159  cd target/
+  160  ls
+  161  java -jar app.jar 
+  162  history 
+  163  sudo docker build -t chaluemwut/mqtt .
+  164  cd mqtt
+  165  ls
+  166  cd iotboot/
+  167  ls
+  168  cd mqtt/
+  169  cd 1.4
+  170  ls
+  171  sudo docker build -t chaluemwut/mqtt .
+  172  cd..
+  173  cd
+  174  cd iotboot/
+  175  sudo docker-compose ps
+  176  sudo docker-compose build
+  177  sudo docker-compose run mqtt bash
+  178  ls
+  179  สห
+  180  ls
+  181  cd
+  182  sudo rm -R iotboot/
+  183  git clone --branch project_iotboot  https://gitlab.com/chaluemwut/iot.git
+  184  sudo git clone --branch project_iotboot  https://gitlab.com/chaluemwut/iot.git
+  185  sudo git clone --branch project_iotboot  https://gitlab.com/chaluemwut/iotboot
+  186  ls
+  187  cd iotboot/
+  188  cd dist/app/
+  189  ls -l
+  190  cd iotboot/mqtt
+191  cd ...
+  192  cd ..
+  193  cd mqtt/
+  194  cd 1.4
+  195  sudo docker build -t chaluemwut/mqtt .
+  196  cd
+  197  cd iotboot/
+  198  sudo docker-compose ps
+  199  sudo docker-compose build
+  200  sudo docker-compose up -d
+  201  ls
+  202  cd mqtt/
+  203  ls
+  204  cd ..
+  205  sudo docker-compose run mqtt bash
+  206  cd
+  207  history
+  208  sudo docker-compose stop
+  209  cd iotboot/
+  210  sudo docker-compose stop
+  211  sudo docker-compose rm -f
+  212  cd mqtt/
+  213  cd 1.4
+  214  sudo docker build -t chaluemwut/mqtt .
+  215  cd
+  216  cd iotboot/
+  217  sudo docker-compose run mysql bash
+  218  sudo docker-compose build
+  219  sudo docker-compose up -d
+  220  sudo system stop apache2
+  221  sudo systemctl stop apache2.service 
+  222  sudo docker-compose build
+  223  sudo docker-compose up -d
+  224  sudo systemctl start apache2.service 
+  225  sudo systemctl start apache2
+  226  sudo systemctl restart apache2
+  227  systemctl status apache2.service
+  228  sudo apt purge apache2
+  229  sudo apt purge mysql-server
+  230  sudo docker-compose stop
+  231  sudo docker-compose rm -f
+  232  cd app/src/
+  233  ls
+  234  cd ..
+  235  ls
+  236  mvn clean package
+  237  ls
+  238  mvn -Dmaven.test.Skip=true
+  239  mvn -Dmaven.test.Skip=true clean package
+  240  sudo mvn -Dmaven.test.Skip=true clean package
+  241  cd
+  242  cd iotboot/
+  243  ls
+  244  history
+  245  cd dist/app/
+  252  sudo cp app.jar /home/p_o_t_peang/iotboot/dist/app/
+  253  cd 
+  254  cd iotboot/
+  255  ls
+  256  cd mqtt/
+  257  sudo docker build -t chaluemwut/mqtt .
+  258  cd
+  259  cd iotboot/
+  260  sudo docker-compose build
+  261  sudo docker-compose up -d
+  262  sudo docker-compose run mqtt bash
+  263  ls
+  264  cd iotboot/
+  265  cd app/
+  266  ls
+  267  cd target/
+  268  ls
+  269  cd ..
+  270  ls
+  271  mvn clean package
+  272  cd ..
+  273  sudo docker-compose stop
+  274  sudo docker-compose rm -f
+  275  cd app/
+  276  mvn clean package
+  277  mvn -h
+  278  mvn clean
+  279  htop
+  280  clear
+  281  sudo apt autoremove 
+  282  sudo apt clean
+  283  sudo reboot
+  284  htop
+  285  cd iotboot/
+  286  ls
+  287  cd app/
+  298  cd target/
+  299  ls
+  300  sudo cp app.jar /home/p_o_t_peang/iotboot/dist/app/
+  301  cd ..
+  302  ls
+  303  cd mqtt/
+  304  history
+  305  sudo docker build -t chaluemwut/mqtt .
+  306  cd ..
+  307  cd dist/
+  308  cd app/
+  309  ls
+  310  cd ..
+  311  ls
+  312  sudo docker-compose build
+  313  sudo docker-compose ps
+  314  sudo docker-compose up -d
+  315  sudo docker-compose logs app
+  316  sudo docker-compose stop
+  317  sudo docker-compose rm -f
+  318  cd app/
+  319  ls
+  320  sudo rm -R target/
+  321  cd src/
+  322  ls
+  323  cd main/
+  324  ls
+  325  cd resources/
+  326  ls
+  327  sudo nano application.properties 
+  328  cd
+  329  cd iotboot/
+  330  cd app/
+  331  ls
+ 332  sudo mvn -Dmaven.test.Skip=true clean package
+  333  cd target/
+  334  sudo cp app.jar /home/p_o_t_peang/iotboot/dist/app/
+  335  cd ..
+  336  history
+  337  cd mqtt/
+  338  cd 1.4
+  339  ls
+  340  sudo docker build -t chaluemwut/mqtt .
+  341  cd 
+  342  cd iotboot/
+  343  sudo docker-compose build
+  344  sudo docker-compose ps
+  345  sudo docker-compose up -d
+  346  sudo docker-compose logs app
+  347  sudo docker-compose ps
+  348  git clone https://github.com/kasperisager/php-dockerized.git
+  349  ls
+  350  cd php-dockerized/
+  351  ls
+  352  sudo nano docker-compose.yml 
+    353  sudo nano Dockerfile 
+  354  ls
+  355  sudo docker-compose up -d
+  356  sudo nano docker-compose.yml 
+  357  sudo docker-compose up -d
+  358  sudo docker-compose build
+  359  sudo nano docker-compose.yml 
+  360  sudo nano Dockerfile 
+  361  sudo docker-compose build
+  362  sudo docker-compose ps
+  363  cd
+  364  sudo rm -R php-dockerized/
+  365  git clone https://github.com/kasperisager/php-dockerized.git
+  366  cd php-dockerized/
+  367  ls
+  368  sudo docker-compose up
+  369  sudo docker-compose rm -f
+  370  sudo docker-compose stop
+  371  sudo docker-compose rm -f
+  372  cd
+  373  git clone https://github.com/beerzaonline/mini_database.git
+  374  ls
+  375  cd mini_database/
+  376  ls
+  377  sudo docker-compose build
+  378  sudo docker-compose up -d
+  379  cd
+  380  sudo rm -R mini_database/
+  381  git clone https://github.com/wdekkers/docker-php7-httpd-apache2-mysql.git
+  382  cd php-dockerized/
+  383  cd
+  384  cd docker-php7-httpd-apache2-mysql/
+  385  ls
+  386  sudo docker-compose build
+  387  sudo docker-compose up -d
+  388  sudo mysql -u
+  389  sudo mysql -u root
+  390  cd
+  391  cd iotboot/
+  392  ls
+  393  sudo docker-compose ps
+  394  sudo docker-compose stop
+  395  sudo docker-compose ps
+  396  sudo mysql -u root
+  397  htop
+  398  sudo apt purge mysql
+  399  sudo apt purge mysql-server-5.7 
+  400  sudo apt autoremove 
+  401  sudo docker-compose ps
+  402  sudo mysql -u ro
+  403  sudo docker-compose up -d
+  404  sudo docker-compose ps
+  405  sudo mysql -u ro
+  406  sudo docker-compose logs qpp
+  407  sudo docker-compose logs app
+  408  sudo docker-compose stop
+  409  sudo docker-compose rm -f
+  410  history
+  411  cd mqtt/1.4
+  412  ls
+  413  cd
+  414  history
+  415  -h
+  416  history
+ 417  ls
+  418  cd iotboot/
+  419  ls
+  420  cd mqtt/
+  421  ls
+  422  cd 1.4
+  423  ls
+  424  sudo docker build -t chaluemwut/mqtt .
+  425  sudo docker images
+  426  cd
+  427  ls
+  428  cd iotboot/
+  429  ls
+  430  sudo docker-compose build
+  431  sudo docker-compose images
+  432  sudo docker images
+  433  sudo docker-compose up -d
+  434  sudo docker-compose ps
+  435  sudo docker-compose logs -f mqtt
+  436  sudo docker-compose ps
+  437  sudo docker-compose logs -f mqtt
+  438  sudo docker images
+  439  sudo docker-compose logs -f app
+
+ 1  ls
+    2  sudo apt-get update
+    3  sudo apt-get install docker-ce docker-ce-cli containerd.io
+    4  sudo apt -y install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+    5  sudo apt remove docker docker-engine docker.io containerd runc
+    6  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    7  sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    8  sudo apt update
+    9  sudo apt -y install docker-ce docker-ce-cli containerd.io
+   10  sudo usermod -aG docker benjawan_ktb
+   11  newgrp docker
+   12  clean
+   13  clear
+   14  cd re
+   15  cd te
+   16  cd test/
+   17  ls
+   18  sudo docker-compose build
+   19  sudo docker-compose up -d
+   20  cd
+   21  ls
+   22  cd iotboot/
+   23  ls
+   24  sudo docker-compose build
+   25  sudo docker-compose up -d
+   26  htop
+   27  sudo docker-compose logs app
+   28  sudo docker-compose ps
+   29  sudo docker images
+   30  sudo docker exec -it d435eee2caa5 bash
+   31  cd
+   32  cd test/
+   33  sudo docker-compose stop
+   34  cd
+   35  cd iotboot/
+   36  ls
+   37  sudo docker exec -it mysql bash
+   38  ls
+   39  sudo docker-compose exec -it d435eee2caa5 bash
+   40  sudo docker container ls
+   41  sudo docker exec -it df11f53435d4 bash
+   42  cd
+   43  cd test/
+   44  ls
+   45  sudo docker build -t jatupol/php
+   46  sudo docker build -t jatupol/php .
+   47  sudo docker-compose build
+   48  sudo docker-compose up -d
+   49  sudo mysql -uroot -p
+   50  sudo docker-compose build
+   51  sudo docker-compose up -d
+   52  sudo docker-compose stop
+   53  sudo docker-compose build
+   54  sudo docker-compose up -d
+   55  sudo docker-compose ps
+   56  sudo docker-compose exec -help
+   57  sudo docker-compose images
+   58  sudo docker-compose exec -d 0bc3268adb25
+   59  sudo docker-compose exec -e 0bc3268adb25 bash
+   60  sudo docker-compose exec -d 0bc3268adb25 bash
+   61  sudo docker-compose stop
+   62  sudo docker-compose build
+   63  sudo docker-compose up -d
+   64  sudo docker-compose stop
+   65  sudo docker-compose build
+   66  sudo docker-compose up -d
+   67  sudo docker-compose stop
+   68  sudo reboot
+   69  cd test/
+   70  ls
+   71  sudo docker-compose build
+   72  sudo docker-compose up -d
+   73  sudo docker container ls
+   74  sudo docker exec -it b929e41e3ab0 bash
+   75  sudo docker-compose build
+   76  sudo docker-compose stop
+   77  sudo docker-compose build
+   78  sudo docker-compose up -d
+   79  sudo docker exec -it b929e41e3ab0 bash
+   80  sudo containerd ls
+   81  cd test/
+   82  sudo docker-compose build
+   83  sudo docker-compose -up -d
+   84  sudo docker-compose up -d
+   85  sudo docker container ls
+   86  sudo docker exec -it ea9246b246e5 bash
+   87  sudo docker-compose rm -f
+   88  sudo docker-compose stop
+   89  sudo docker-compose rm -f
+   90  sudo docker-compose build
+   91  sudo docker-compose up -d
+   92  sudo docker exec -it ea9246b246e5 bash
+   93  sudo docker container ls
+   94  sudo docker exec -it e1e05b72d08b bash
+   95  sudo docker-compose stop
+   96  sudo docker-compose ps
+   97  cd iotboot/
+   98  sudo docker-compose ps
+   99  sudo docker-compose up -d
+  100  sudo docker-compose ps
+  101  sudo docker container ls
+  102  sudo docker exec -it df11f53435d4 bash
+  103  cd dist/
+  104  cd app/
+  105  ls
+  106  cd ../../
+  107  ls
+  108  sudo docker-compose stop
+  109  cd dist/app/
+  110  sudo rm app.jar 
+  111  ls
+  112  cd ../../
+  113  sudo docker-compose build
+  114  sudo docker-compose up -d
+  115  sudo docker-compose ps
+  116  sudo docker-compose logs app
+  117  sudo docker-compose stop
+  118  sudo docker-compose build
+  119  sudo docker-compose up -d
+  120  sudo docker-compose logs app
+  121  sudo docker-compose ps
+  122  sudo docker container ls
+  123  sudo docker exec -it df11f53435d4 bash
+  124  sudo docker-compose stop
+  125  sudo docker-compose build
+  126  sudo docker-compose up -d
+  127  sudo docker-compose logs app
+  128  ls
+  129  cd iotboot/
+  130  ls
+  131  sudo docker-compose build
+  132  sudo docker-compose up -d
+  133  sudo docker-compose ps
+  134  sudo docker-compose logs app
+  135  sudo docker-compose build
+  136  sudo docker-compose up -d
+  137  sudo docker-compose ps
+  138  ls
+  139  cd mqtt/
+  140  ls
+  141  cd 1.4
+  142  ls
+  143  cd ..
+  144  sudo docker-compose stop
+  145  sudo docker-compose start
+  146  sudo docker-compose build
+  147  sudo docker-compose up -d
+  148  sudo docker-compose ps
+  149  history
