@@ -5,18 +5,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:mqtt_dashboard/GetResponses.dart';
+import 'package:mqtt_dashboard/Model/SaveCardModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toast/toast.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
 import 'package:http/http.dart' as http;
+import 'Model/ListCardModel.dart';
+import 'MqttClientUtil.dart';
 import 'config.dart';
 import 'main.dart';
 
-List _temp = List();
+//List _temp = List();
 TextEditingController _sName = TextEditingController();
 TextEditingController _sTopic = TextEditingController();
-TextEditingController _sTextOn = TextEditingController();
-TextEditingController _sTextOff = TextEditingController();
+//TextEditingController _sTextOn = TextEditingController();
+//TextEditingController _sTextOff = TextEditingController();
 TextEditingController _sPublishOn = TextEditingController();
 TextEditingController _sPublishOff = TextEditingController();
 // TextEditingController _sReciveOn = TextEditingController();
@@ -34,30 +37,14 @@ TextEditingController _port = TextEditingController();
 TextEditingController _user = TextEditingController();
 TextEditingController _pass = TextEditingController();
 
-String clientIdentifier = 'android';
-
-mqtt.MqttConnectionState connectionState;
-
-List<String> _dataConnect = List<String>();
-
-List<String> _dataSwitch = List<String>();
+//List<String> _dataSwitch = List<String>();
 
 GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-mqtt.MqttClient _client;
-
-StreamSubscription subscription;
-
-bool _checkConnect = false;
 
 class dashboard extends StatefulWidget {
   int _userId;
 
-  // mqtt.MqttClient _client;
-
   dashboard(this._userId);
-
-  //print(_temp.length);
 
   @override
   State<StatefulWidget> createState() {
@@ -68,12 +55,11 @@ class dashboard extends StatefulWidget {
 class _dashboard extends State {
   int _userId;
 
-  // mqtt.MqttClient _client;
-
   _dashboard(this._userId);
 
   List lst = List();
-  List _tempUI = List();
+  // List listCard = List();
+  List<ListCard> listCard = List<ListCard>();
   bool toggleStatus = false;
   String _tempMassage;
 
@@ -82,17 +68,6 @@ class _dashboard extends State {
 
   @override
   void initState() {
-    if (_client != null) {
-      if (_client.connectionStatus.state ==
-          mqtt.MqttConnectionState.connected) {
-        _checkConnect = true;
-      } else {
-        _checkConnect = false;
-      }
-    } else {
-      _checkConnect = false;
-    }
-
 //     _getDataRecive("on").then((value) => onValue = value);
 //     _getDataRecive("off").then((value) => offValue = value);
 
@@ -154,7 +129,8 @@ class _dashboard extends State {
     final mqtt.MqttClientPayloadBuilder builder =
         mqtt.MqttClientPayloadBuilder();
     builder.addString('$msg');
-    _client.publishMessage(pubTopic, mqtt.MqttQos.exactlyOnce, builder.payload);
+    MqttClientUtil.instance.client
+        .publishMessage(pubTopic, mqtt.MqttQos.exactlyOnce, builder.payload);
   }
 
   // void checkData() async {
@@ -166,102 +142,14 @@ class _dashboard extends State {
   // }
 
   void _subscribeToTopic(String topic) {
-    if (_checkConnect) {
+    if (MqttClientUtil.instance.checkStatus()) {
       print('[MQTT client] Subscribing to ${topic.trim()}');
-      _client.subscribe(topic, mqtt.MqttQos.exactlyOnce);
+      MqttClientUtil.instance.client.subscribe(topic, mqtt.MqttQos.exactlyOnce);
     }
   }
 
   void showToast(String msg, {int duration, int gravity}) {
     Toast.show(msg, context, duration: duration, gravity: gravity);
-  }
-
-  void _connect() async {
-    if (_formKey.currentState.validate()) {}
-    _client = mqtt.MqttClient(_server.text, '');
-    _client.port = int.parse(_port.text);
-
-    /// Set logging on if needed, defaults to off
-    _client.logging(on: true);
-
-    /// If you intend to use a keep alive value in your connect message that is not the default(60s)
-    /// you must set it here
-    _client.keepAlivePeriod = 30;
-
-    /// Add the unsolicited disconnection callback
-    _client.onDisconnected = _onDisconnected;
-
-    /// Create a connection message to use or use the default one. The default one sets the
-    /// client identifier, any supplied username/password, the default keepalive interval(60s)
-    /// and clean session, an example of a specific one below.
-    final mqtt.MqttConnectMessage connMess = mqtt.MqttConnectMessage()
-        .withClientIdentifier(clientIdentifier)
-        .startClean() // Non persistent session for testing
-        .keepAliveFor(30)
-        .withWillQos(mqtt.MqttQos.atMostOnce);
-    print('[MQTT client] MQTT client connecting....');
-    _client.connectionMessage = connMess;
-
-    /// Connect the client, any errors here are communicated by raising of the appropriate exception. Note
-    /// in some circumstances the broker will just disconnect us, see the spec about this, we however will
-    /// never send malformed messages.
-
-    try {
-      await _client.connect(_user.text, _pass.text);
-    } catch (e) {
-      print(e);
-      _disconnect();
-    }
-
-    /// Check if we are connected
-    if (_client.connectionStatus.state == mqtt.MqttConnectionState.connected) {
-      // print(
-      //     "###########################################################################");
-      // print(mqtt.MqttConnectionState.connected);
-      // print(
-      //     "###########################################################################");
-      connectionState = mqtt.MqttConnectionState.connected;
-      showToast("Connected", duration: Toast.LENGTH_LONG, gravity: 0);
-
-      setState(() {
-        _checkConnect = true;
-      });
-
-      _dataConnect.add(_server.text);
-      _dataConnect.add(_port.text);
-      _dataConnect.add(_user.text);
-      _dataConnect.add(_pass.text);
-      _saveDataConnect(_dataConnect);
-
-      subscription = _client.updates.listen(_onMessage);
-      for (Map<String, dynamic> data in _tempUI) {
-        _subscribeToTopic("${data['topic']}");
-      }
-    } else {
-      print('[MQTT client] ERROR: MQTT client connection failed - '
-          'disconnecting, state is ${_client.connectionStatus}');
-      _disconnect();
-    }
-  }
-
-  void _onDisconnected() {
-    print('[MQTT client] _onDisconnected');
-    //topics.clear();
-    connectionState = mqtt.MqttConnectionState.disconnected;
-    _client = null;
-    subscription = null;
-    showToast("Disconnected", duration: Toast.LENGTH_LONG, gravity: 0);
-    print('[MQTT client] MQTT client disconnected');
-  }
-
-  void _disconnect() {
-    print('[MQTT client] _disconnect()');
-    _client.disconnect();
-    // subscription.cancel();
-    setState(() {
-      _checkConnect = false;
-    });
-    _onDisconnected();
   }
 
   void _onMessage(List<mqtt.MqttReceivedMessage> event) {
@@ -284,11 +172,10 @@ class _dashboard extends State {
     // setState(() {
     // _tempMassage = message;
     if (message == "on" || message == "off") {
-      for (var i = 0; i < _tempUI.length; i++) {
-        Map<String, dynamic> data = _tempUI[i];
-
+      listCard.asMap().forEach((index, element) { 
+        ListCard _card = element;
         // String dataValue;
-        if (data['topic'] == "${event[0].topic}") {
+        if (_card.topic == "${event[0].topic}") {
           if (message != null) {
             if (message == "on") {
               toggleStatus = true;
@@ -298,24 +185,24 @@ class _dashboard extends State {
               // dataValue = data['offValue'];
             }
 //            print("OLD ${_tempUI[i]}");
-            data['dataNow'] = toggleStatus ? "on" : "off";
-            _tempUI.removeAt(i);
-            _tempUI.insert(i, data);
+            _card.dataNow = toggleStatus ? "on" : "off";
+            listCard.removeAt(index);
+            listCard.insert(index, _card);
 //            print("NOW ${_tempUI[i]}");
-            updata(data, message.toString());
+            updata(_card, message.toString());
           }
           setState(() {
-            lst.removeAt(i);
-            lst.insert(i, _bodyCard(data, i, toggleStatus));
+            lst.removeAt(index);
+            lst.insert(index, _bodyCard(_card, index, toggleStatus));
           });
         }
-      }
+      });
     }
     // });
   }
 
   void _onSwitchSave() async {
-    var uri = Uri.http('${config.API_Url}', '/api/card/save', {
+    var uri = Uri.http(config.API_Url, APIPath.api_save_card, {
       "userId": _userId.toString(),
       "title": _sName.text,
       "topic": _sTopic.text,
@@ -327,20 +214,20 @@ class _dashboard extends State {
       // HttpHeaders.authorizationHeader: 'Token $token',
       HttpHeaders.contentTypeHeader: 'application/json',
     });
-    Map jsonData = jsonDecode(response.body) as Map;
+    SaveCardModel _listCard = SaveCardModel.fromMap(jsonDecode(response.body) as Map);
 
-    if (jsonData['status'] == 0) {
-      Map<String, dynamic> data = jsonData['data'];
-      if (_checkConnect) {
-        _subscribeToTopic("${data['topic']}");
+    if (_listCard.status == 0) {
+      ListCard _card = _listCard.data;
+      if (MqttClientUtil.instance.checkStatus()) {
+        _subscribeToTopic("${_card.topic}");
       }
 //       _saveDataRecive("on", _sReciveOn.text);
 //       _saveDataRecive("off", _sReciveOff.text);
       Navigator.pop(context);
       setState(() {
         // lst.clear();
-        _tempUI.add(data);
-        _createSwitch(data);
+        listCard.add(_card);
+        _createSwitch(_card);
       });
       // Navigator.push(
       //     context,
@@ -355,7 +242,7 @@ class _dashboard extends State {
   }
 
   void _onSwitchEdit(int id, String dataNow) async {
-    var uri = Uri.http('${config.API_Url}', '/api/card/edit', {
+    var uri = Uri.http(config.API_Url, APIPath.api_edit_card, {
       "id": id.toString(),
       "userId": _userId.toString(),
       "title": _sName.text,
@@ -364,6 +251,7 @@ class _dashboard extends State {
       "offValue": _sPublishOff.text,
       "dataNow": dataNow
     });
+
     var response = await http.get(uri, headers: {
       // HttpHeaders.authorizationHeader: 'Token $token',
       HttpHeaders.contentTypeHeader: 'application/json',
@@ -373,35 +261,43 @@ class _dashboard extends State {
 
     if (jsonData['status'] == 0) {
       Iterable search =
-          _tempUI.where((a) => a['id'].toString().contains(id.toString()));
-      Map<String, dynamic> dataMap = search.toList()[0];
+          listCard.where((a) => a.id.toString().contains(id.toString()));
+      ListCard _card = search.toList()[0];
 
-      if (dataMap['topic'] != _sTopic.text) {
-        if (_checkConnect) {
+      if (_card.topic != _sTopic.text) {
+        if (MqttClientUtil.instance.checkStatus()) {
           _subscribeToTopic("${_sTopic.text}");
         }
       }
 
-      var dataString = {
-        "id": id,
-        "userId": _userId,
-        "title": _sName.text,
-        "topic": _sTopic.text,
-        "onValue": _sPublishOn.text,
-        "offValue": _sPublishOff.text,
-        "dataNow": dataNow
-      };
+      ListCard _newCard = ListCard();
+      _newCard.id = id;
+      _newCard.userId = _userId;
+      _newCard.title = _sName.text;
+      _newCard.topic = _sTopic.text;
+      _newCard.onValue = _sPublishOn.text;
+      _newCard.offValue = _sPublishOff.text;
+      _newCard.dataNow = dataNow;
 
-      print("DATASTRING ${dataString}");
-      int index = _tempUI.indexOf(dataMap);
-      _tempUI.removeAt(index);
-      _tempUI.insert(index, dataString);
-      Map<String, dynamic> test = dataString;
+      // var dataString = {
+      //   "id": id,
+      //   "userId": _userId,
+      //   "title": _sName.text,
+      //   "topic": _sTopic.text,
+      //   "onValue": _sPublishOn.text,
+      //   "offValue": _sPublishOff.text,
+      //   "dataNow": dataNow
+      // };
+
+      print("DATASTRING ${_newCard}");
+      int index = listCard.indexOf(_card);
+      listCard.removeAt(index);
+      listCard.insert(index, _newCard);
 
       setState(() {
         lst.removeAt(index);
         lst.insert(
-            index, _bodyCard(test, index, dataNow == "on" ? true : false));
+            index, _bodyCard(_newCard, index, dataNow == "on" ? true : false));
       });
 
       Navigator.pop(context);
@@ -414,9 +310,9 @@ class _dashboard extends State {
     }
   }
 
-  void updata(Map<String, dynamic> data, String massage) async {
+  void updata(ListCard _listCard, String massage) async {
     var uri = Uri.http('${config.API_Url}', '/api/card/updateData', {
-      "idCard": data['id'].toString(),
+      "idCard": _listCard.id.toString(),
       "userId": _userId.toString(),
       "dataNow": massage
     });
@@ -444,17 +340,17 @@ class _dashboard extends State {
       HttpHeaders.contentTypeHeader: 'application/json',
     });
     print(response.body);
-    Map jsonData = jsonDecode(response.body) as Map;
+    ListCardModel cardModel =
+        ListCardModel.fromMap(jsonDecode(response.body) as Map);
 
-    if (jsonData['status'] == 0) {
-      List temp = jsonData['data'];
-      temp.sort((a, b) => a['id'].toString().compareTo(b['id'].toString()));
+    if (cardModel.status == 0) {
+      listCard.addAll(cardModel.data);
+      listCard.sort((a, b) => a.id.toString().compareTo(b.id.toString()));
 
-      for (var i = 0; i < temp.length; i++) {
-        Map<String, dynamic> data = temp[i];
-        _tempUI.add(data);
-        _createSwitch(data);
-      }
+      listCard.forEach((element) {
+        // _tempUI.add(element);
+        _createSwitch(element);
+      });
     } else {
       // showToast("Username Or Password Error",
       //     duration: Toast.LENGTH_LONG,
@@ -465,11 +361,11 @@ class _dashboard extends State {
 
 //card Switch
 
-  void _createSwitch(Map<String, dynamic> data) {
+  void _createSwitch(ListCard _listCard) {
     int _count;
     bool check;
 
-    if (data['dataNow'] == "on") {
+    if (_listCard.dataNow == "on") {
       check = true;
     } else {
       check = false;
@@ -477,17 +373,17 @@ class _dashboard extends State {
 
     _count = lst.length;
     setState(() {
-      lst.add(_bodyCard(data, _count, check));
+      lst.add(_bodyCard(_listCard, _count, check));
     });
   }
 
-  Widget _bodyCard(Map<String, dynamic> _data, int _count, bool _check) {
+  Widget _bodyCard(ListCard _listCard, int _count, bool _check) {
     return Card(
       child: ListTile(
         onLongPress: () {
-          _menu(context, _data['id']);
+          _menu(context, _listCard.id);
         },
-        title: Text(_data['title']),
+        title: Text(_listCard.title),
         // leading: Text(''),
         subtitle: Row(
           // mainAxisAlignment: MainAxisAlignment.center,
@@ -499,7 +395,7 @@ class _dashboard extends State {
             ),
             IconButton(
               onPressed: () {
-                onClick(_data, _count, _check);
+                onClick(_listCard, _count, _check);
               },
               icon: Icon(
                 _check ? MdiIcons.toggleSwitchOff : MdiIcons.toggleSwitch,
@@ -519,14 +415,14 @@ class _dashboard extends State {
     );
   }
 
-  void onClick(Map<String, dynamic> _data, int _count, bool _check) {
+  void onClick(ListCard _listCard, int _count, bool _check) {
     _check = !_check;
-    print(_data);
-    _onPublish("${_data['topic']}",
-        _check ? "${_data['onValue']}" : "${_data['offValue']}");
+    print(_listCard);
+    _onPublish("${_listCard.topic}",
+        _check ? "${_listCard.onValue}" : "${_listCard.offValue}");
     setState(() {
       lst.removeAt(_count);
-      lst.insert(_count, _bodyCard(_data, _count, _check));
+      lst.insert(_count, _bodyCard(_listCard, _count, _check));
     });
   }
 
@@ -642,18 +538,19 @@ class _dashboard extends State {
                         url: "/api/card/delete",
                         body: {"idCard": idCard.toString()});
                     if (res['status'] == 0) {
-                      if (_tempUI.isNotEmpty && _tempUI != null) {
-                        for (var i = 0; i < _tempUI.length; i++) {
-                          Map<String, dynamic> data = _tempUI[i];
-                          if (data['id'] == idCard) {
-                            _tempUI.removeAt(i);
+                      if (listCard.isNotEmpty && listCard != null) {
+                        listCard.asMap().forEach((index, element) {
+                          ListCard _card = element;
+
+                          if (_card.id == idCard) {
+                            // listCard.removeAt(index);
                             setState(() {
-                              lst.removeAt(i);
+                              lst.removeAt(index);
                               // lst.clear();
                               // this._listCard();
                             });
                           }
-                        }
+                        });
                       }
                       Navigator.pop(context);
                       Navigator.pop(context);
@@ -675,7 +572,7 @@ class _dashboard extends State {
       _sPublishOff.clear();
     } else {
       Iterable search =
-          _tempUI.where((a) => a['id'].toString().contains(idCard.toString()));
+          listCard.where((a) => a.id.toString().contains(idCard.toString()));
       Map<String, dynamic> dataMap = search.toList()[0];
       setState(() {
         _sName.text = dataMap['title'].toString();
@@ -835,138 +732,191 @@ class _dashboard extends State {
 
   Future<Null> _dialogConnect(BuildContext context) {
     return showDialog(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text('CONNECTION'),
-        content: SingleChildScrollView(
-          child: Container(
-            child: Column(children: [
-              new Padding(padding: EdgeInsets.only(top: 5.0)),
-              new Form(
-                key: _formKey,
-                child: Column(
-                  children: <Widget>[
-                    new TextFormField(
-                      controller: _server,
-                      style: TextStyle(color: Colors.grey),
-                      decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
+        context: context,
+        builder: (BuildContext context) =>
+            StatefulBuilder(builder: (context, setState) {
+              return AlertDialog(
+                title: Text('CONNECTION'),
+                content: SingleChildScrollView(
+                  child: Container(
+                    child: Column(children: [
+                      new Padding(padding: EdgeInsets.only(top: 5.0)),
+                      new Form(
+                        key: _formKey,
+                        child: Column(
+                          children: <Widget>[
+                            new TextFormField(
+                              controller: _server,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Server',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance,
+                                    color: Colors.black,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Server";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              controller: _port,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Port',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.settings_input_component,
+                                    color: Colors.black,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Port";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              controller: _user,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Username',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.account_box,
+                                    color: Colors.black,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Username";
+                                }
+                              },
+                            ),
+                            new Padding(padding: EdgeInsets.only(top: 20.0)),
+                            new TextFormField(
+                              obscureText: true,
+                              controller: _pass,
+                              style: TextStyle(color: Colors.grey),
+                              decoration: new InputDecoration(
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.grey[300]),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]),
+                                      borderRadius: BorderRadius.circular(5.0)),
+                                  labelText: 'Password',
+                                  labelStyle:
+                                      TextStyle(color: Colors.grey[300]),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.black,
+                                  ),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(5.0))),
+                              validator: (String value) {
+                                if (value.trim().isEmpty) {
+                                  return "Please enter Password";
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      new Padding(padding: EdgeInsets.only(top: 30.0)),
+                      ButtonTheme(
+                        minWidth: 150.0,
+                        height: 50.0,
+                        child: RaisedButton(
+                          shape: new RoundedRectangleBorder(
+                            borderRadius: new BorderRadius.circular(15.0),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                              borderRadius: BorderRadius.circular(5.0)),
-                          labelText: 'Server',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.account_balance,
-                            color: Colors.black,
-                          ),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(5.0))),
-                      validator: (String value) {
-                        if (value.trim().isEmpty) {
-                          return "Please enter Server";
-                        }
-                      },
-                    ),
-                    new Padding(padding: EdgeInsets.only(top: 20.0)),
-                    new TextFormField(
-                      controller: _port,
-                      style: TextStyle(color: Colors.grey),
-                      decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                              borderRadius: BorderRadius.circular(5.0)),
-                          labelText: 'Port',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.settings_input_component,
-                            color: Colors.black,
-                          ),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(5.0))),
-                      validator: (String value) {
-                        if (value.trim().isEmpty) {
-                          return "Please enter Port";
-                        }
-                      },
-                    ),
-                    new Padding(padding: EdgeInsets.only(top: 20.0)),
-                    new TextFormField(
-                      controller: _user,
-                      style: TextStyle(color: Colors.grey),
-                      decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                              borderRadius: BorderRadius.circular(5.0)),
-                          labelText: 'Username',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.account_box,
-                            color: Colors.black,
-                          ),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(5.0))),
-                      validator: (String value) {
-                        if (value.trim().isEmpty) {
-                          return "Please enter Username";
-                        }
-                      },
-                    ),
-                    new Padding(padding: EdgeInsets.only(top: 20.0)),
-                    new TextFormField(
-                      obscureText: true,
-                      controller: _pass,
-                      style: TextStyle(color: Colors.grey),
-                      decoration: new InputDecoration(
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey[300]),
-                              borderRadius: BorderRadius.circular(5.0)),
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.grey[300]),
-                          prefixIcon: const Icon(
-                            Icons.lock,
-                            color: Colors.black,
-                          ),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(5.0))),
-                      validator: (String value) {
-                        if (value.trim().isEmpty) {
-                          return "Please enter Password";
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              new Padding(padding: EdgeInsets.only(top: 30.0)),
-              ButtonTheme(
-                minWidth: 150.0,
-                height: 50.0,
-                child: RaisedButton(
-                  shape: new RoundedRectangleBorder(
-                    borderRadius: new BorderRadius.circular(15.0),
+                          onPressed: () {
+                            if (!MqttClientUtil.instance.checkStatus()) {
+                              MqttClientUtil.instance
+                                  .connect(_server.text, _port.text, _user.text,
+                                      _pass.text)
+                                  .then((value) {
+                                if (value &&
+                                    MqttClientUtil.instance.checkStatus()) {
+                                  MqttClientUtil.instance
+                                      .setOnMessage(_onMessage);
+
+                                  if (listCard.isNotEmpty) {
+                                    listCard.forEach((element) {
+                                      ListCard _card = element;
+                                      _subscribeToTopic(_card.topic);
+                                    });
+                                  }
+
+                                  setState(() {});
+                                  this.setState(() {});
+                                  this.showToast("Connected",
+                                      duration: Toast.LENGTH_SHORT,
+                                      gravity: Toast.BOTTOM);
+                                }
+                              });
+                            } else {
+                              MqttClientUtil.instance.disconnect();
+                              setState(() {});
+                              this.setState(() {});
+                              this.showToast("DisConnected",
+                                  duration: Toast.LENGTH_SHORT,
+                                  gravity: Toast.BOTTOM);
+                            }
+                          },
+                          child: MqttClientUtil.instance.checkStatus()
+                              ? Text("Disconnect")
+                              : Text("Connect"),
+                          color: Colors.grey[300],
+                        ),
+                      ),
+                    ]),
                   ),
-                  onPressed: _checkConnect ? _disconnect : _connect,
-                  child: _checkConnect ? Text("Disconnect") : Text("Connect"),
-                  color: Colors.grey[300],
                 ),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
+              );
+            }));
   }
 
   // dialoglogout
@@ -989,9 +939,9 @@ class _dashboard extends State {
                   child: Text("Logout"),
                   onPressed: () {
                     _logout();
-                    _checkConnect ? _client.disconnect() : null;
-                    _client = null;
-                    subscription = null;
+                    MqttClientUtil.instance.checkStatus()
+                        ? MqttClientUtil.instance.disconnect()
+                        : null;
                     Navigator.pop(context);
                     Navigator.pushReplacement(
                         context,
@@ -1020,7 +970,10 @@ class _dashboard extends State {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text('Dashboard', style: TextStyle(color: Colors.grey[300])),
-            Text(_checkConnect ? 'Connected' : 'Disconnected',
+            Text(
+                MqttClientUtil.instance.checkStatus()
+                    ? 'Connected'
+                    : 'Disconnected',
                 style: TextStyle(color: Colors.grey[300], fontSize: 12))
           ],
         ),
@@ -1029,7 +982,9 @@ class _dashboard extends State {
               icon: Icon(MdiIcons.linkVariant),
               tooltip: 'Connection',
               onPressed: () {
-                _dialogConnect(context);
+                _dialogConnect(context).then((value) {
+                  setState(() {});
+                });
                 // return showDialog(
                 //     context: context,
                 //     builder: (_) => DialogConnection(_userId));

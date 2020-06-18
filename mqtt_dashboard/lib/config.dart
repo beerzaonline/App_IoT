@@ -9,4 +9,14 @@ class config {
   static const String clientIdentifier = 'android';
 
   static const String API_Url = "34.87.101.146:8080";
+//  static const String API_Url = "192.168.1.21:8080";
+
+
+}
+
+//part
+class APIPath {
+  static const String api_login = "/api/user/loginApp";
+  static const String api_edit_card = "/api/card/edit";
+  static const String api_save_card = "/api/card/save";
 }

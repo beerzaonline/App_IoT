@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toast/toast.dart';
 import 'Dashboard.dart';
+import 'Model/LoginModel.dart';
 import 'Signup.dart';
 import 'config.dart';
 
@@ -87,17 +88,17 @@ class _MyAppState extends State<MyApp> {
 
     void _onLogin() async {
       if (true) {
-        var uri = Uri.http('${config.API_Url}', '/api/user/loginApp',
+        var uri = Uri.http(config.API_Url, APIPath.api_login,
             {"username": _username.text, "password": _password.text});
         var response = await http.get(uri, headers: {
           // HttpHeaders.authorizationHeader: 'Token $token',
           HttpHeaders.contentTypeHeader: 'application/json',
         });
         print(response.body);
-        Map jsonData = jsonDecode(response.body) as Map;
+        LoginModel jsonData = LoginModel.fromMap(jsonDecode(response.body) as Map);
 
-        if (jsonData['status'] == 0) {
-          int userId = jsonData['data'];
+        if (jsonData.status == 0) {
+          int userId = jsonData.data;
           _login(userId);
           Navigator.pushReplacement(
               context,
